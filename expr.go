@@ -78,6 +78,16 @@ func (e *Expr) Next(last time.Time) time.Time {
 	return time.Date(year, time.Month(month), day, hour, minute, second, 0, last.Location())
 }
 
+// Range 获取一个范围内的整数
+func Range(start, end uint8) []uint8 {
+	r := make([]uint8, 0, end-start+1)
+	for i := start; i <= end; i++ {
+		r = append(r, i)
+	}
+
+	return r
+}
+
 func getMonthDays(month time.Month, year int, loc *time.Location) int {
 	first := time.Date(year, month, 1, 0, 0, 0, 0, loc)
 	last := first.AddDate(0, 1, -1)

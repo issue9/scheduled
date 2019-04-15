@@ -5,9 +5,7 @@
 // Package cron 定时任务
 package cron
 
-import (
-	"time"
-)
+import "time"
 
 // 表示任务状态
 const (
@@ -46,4 +44,9 @@ func New() *Cron {
 // New 添加一个新的定时任务
 func (c *Cron) New(f JobFunc, n Nexter) {
 	// TODO
+}
+
+// NewTicker 添加一个新的定时任务
+func (c *Cron) NewTicker(f JobFunc, dur time.Duration) {
+	c.New(f, newDuration(dur))
 }
