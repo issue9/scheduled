@@ -64,7 +64,7 @@ func (e *Expr) Next(last time.Time) time.Time {
 
 	// 由于月份中的天数不固定，还得计算该天数是否存在于当前月分
 	for {
-		days := getMonthDays(time.Month(month), year, last.Location())
+		days := getMonthDays(time.Month(month), year)
 		if day <= days { // 天数存在于当前月，则退出循环
 			break
 		}
@@ -88,8 +88,9 @@ func Range(start, end uint8) []uint8 {
 	return r
 }
 
-func getMonthDays(month time.Month, year int, loc *time.Location) int {
-	first := time.Date(year, month, 1, 0, 0, 0, 0, loc)
+// 获取指定月份的天数
+func getMonthDays(month time.Month, year int) int {
+	first := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
 	last := first.AddDate(0, 1, -1)
 	return last.Day()
 }

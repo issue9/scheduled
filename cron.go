@@ -42,11 +42,15 @@ func New() *Cron {
 }
 
 // New 添加一个新的定时任务
-func (c *Cron) New(f JobFunc, n Nexter) {
-	// TODO
+func (c *Cron) New(name string, f JobFunc, n Nexter) {
+	c.jobs = append(c.jobs, &Job{
+		name: "",
+		f:    f,
+		next: n,
+	})
 }
 
 // NewTicker 添加一个新的定时任务
-func (c *Cron) NewTicker(f JobFunc, dur time.Duration) {
-	c.New(f, newDuration(dur))
+func (c *Cron) NewTicker(name string, f JobFunc, dur time.Duration) {
+	c.New(name, f, newDuration(dur))
 }
