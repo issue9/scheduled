@@ -57,3 +57,82 @@ func TestGetMonthDays(t *testing.T) {
 		a.Equal(v, getMonthDays(time.Month(k), 2020))
 	}
 }
+
+func TestNext(t *testing.T) {
+	a := assert.New(t)
+
+	type test struct {
+		// 输入
+		curr  uint8
+		list  []uint8
+		carry bool
+
+		// 输出
+		v uint8
+		c bool
+	}
+
+	var data = []*test{
+		&test{
+			curr:  0,
+			list:  []uint8{1, 3, 5},
+			carry: true,
+			v:     1,
+			c:     false,
+		},
+
+		&test{
+			curr:  1,
+			list:  []uint8{1, 3, 5},
+			carry: false,
+			v:     1,
+			c:     false,
+		},
+
+		&test{
+			curr:  1,
+			list:  []uint8{1, 3, 5},
+			carry: true,
+			v:     3,
+			c:     false,
+		},
+
+		&test{
+			curr:  5,
+			list:  []uint8{1, 3, 5},
+			carry: false,
+			v:     5,
+			c:     false,
+		},
+
+		&test{
+			curr:  5,
+			list:  []uint8{1, 3, 5},
+			carry: true,
+			v:     1,
+			c:     true,
+		},
+
+		&test{
+			curr:  5,
+			list:  nil,
+			carry: true,
+			v:     6,
+			c:     false,
+		},
+
+		&test{
+			curr:  5,
+			list:  nil,
+			carry: false,
+			v:     5,
+			c:     false,
+		},
+	}
+
+	for _, item := range data {
+		v, c := next(item.curr, item.list, item.carry)
+		a.Equal(v, item.v).
+			Equal(c, item.c)
+	}
+}

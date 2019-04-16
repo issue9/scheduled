@@ -4,9 +4,7 @@
 
 package cron
 
-import (
-	"time"
-)
+import "time"
 
 // 该值的顺序与 cron 中语法的顺序相同
 const (
