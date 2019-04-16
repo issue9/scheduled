@@ -70,6 +70,7 @@ func parseExpr(spec string) (*Expr, error) {
 		data:  make([][]uint8, 6, 6),
 	}
 
+	null := true
 	for i, f := range fields {
 		vals, err := parseField(f)
 		if err != nil {
@@ -77,6 +78,7 @@ func parseExpr(spec string) (*Expr, error) {
 		}
 
 		if vals != nil {
+			null = false
 			bound := bounds[i]
 			if !bound.valid(vals[0]) || !bound.valid(vals[len(vals)-1]) {
 				return nil, errors.New("值超出范围")
@@ -84,6 +86,10 @@ func parseExpr(spec string) (*Expr, error) {
 		}
 
 		e.data[i] = vals
+	}
+
+	if null { // 所有项都为 *
+		return nil, errors.New("所有项都为 *")
 	}
 
 	return e, nil

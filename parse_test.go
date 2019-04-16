@@ -10,6 +10,14 @@ import (
 	"github.com/issue9/assert"
 )
 
+func TestCron_NewExpr(t *testing.T) {
+	a := assert.New(t)
+
+	c := New()
+	a.NotError(c.NewExpr("test", nil, "* * * 3-7 * *"))
+	a.Error(c.NewExpr("test", nil, "* * * 3-7a * *"))
+}
+
 func TestParseExpr(t *testing.T) {
 	a := assert.New(t)
 
@@ -20,6 +28,32 @@ func TestParseExpr(t *testing.T) {
 	}
 
 	exprs := []*expr{
+		&expr{
+			expr: "1-3,10,9 * 3-7 * * 1",
+			vals: [][]uint8{[]uint8{1, 2, 3, 9, 10}, nil, []uint8{3, 4, 5, 6, 7}, nil, nil, []uint8{1}},
+		},
+		&expr{
+			expr: "* * * * * 1",
+			vals: [][]uint8{nil, nil, nil, nil, nil, []uint8{1}},
+		},
+		&expr{
+			expr: "* * * * * 0",
+			vals: [][]uint8{nil, nil, nil, nil, nil, []uint8{0}},
+		},
+		&expr{
+			expr: "* * * * * 6",
+			vals: [][]uint8{nil, nil, nil, nil, nil, []uint8{6}},
+		},
+		&expr{ // 解析错误
+			expr:   "* * * * * 7-a",
+			hasErr: true,
+			vals:   nil,
+		},
+		&expr{ // 值超出范围
+			expr:   "* * * * * 7",
+			hasErr: true,
+			vals:   nil,
+		},
 		&expr{ // 表达式内容不够长
 			expr:   "*",
 			hasErr: true,
@@ -27,6 +61,11 @@ func TestParseExpr(t *testing.T) {
 		},
 		&expr{ // 表达式内容太长
 			expr:   "* * * * * * *",
+			hasErr: true,
+			vals:   nil,
+		},
+		&expr{ // 都为 *
+			expr:   "* * * * * * ",
 			hasErr: true,
 			vals:   nil,
 		},
@@ -56,44 +95,36 @@ func TestParseField(t *testing.T) {
 
 	fields := []*field{
 		&field{
-			field:  "*",
-			hasErr: false,
-			vals:   nil,
+			field: "*",
+			vals:  nil,
 		},
 		&field{
-			field:  "2",
-			hasErr: false,
-			vals:   []uint8{2},
+			field: "2",
+			vals:  []uint8{2},
 		},
 		&field{
-			field:  "1,2",
-			hasErr: false,
-			vals:   []uint8{1, 2},
+			field: "1,2",
+			vals:  []uint8{1, 2},
 		},
 		&field{
-			field:  "1,2,4,7,",
-			hasErr: false,
-			vals:   []uint8{1, 2, 4, 7},
+			field: "1,2,4,7,",
+			vals:  []uint8{1, 2, 4, 7},
 		},
 		&field{
-			field:  "1-4",
-			hasErr: false,
-			vals:   []uint8{1, 2, 3, 4},
+			field: "1-4",
+			vals:  []uint8{1, 2, 3, 4},
 		},
 		&field{
-			field:  "1-2",
-			hasErr: false,
-			vals:   []uint8{1, 2},
+			field: "1-2",
+			vals:  []uint8{1, 2},
 		},
 		&field{
-			field:  "1-4,9",
-			hasErr: false,
-			vals:   []uint8{1, 2, 3, 4, 9},
+			field: "1-4,9",
+			vals:  []uint8{1, 2, 3, 4, 9},
 		},
 		&field{
-			field:  "1-4,9,19-21",
-			hasErr: false,
-			vals:   []uint8{1, 2, 3, 4, 9, 19, 20, 21},
+			field: "1-4,9,19-21",
+			vals:  []uint8{1, 2, 3, 4, 9, 19, 20, 21},
 		},
 		&field{ // 重复的值
 			field:  "1-4,9,9-11",
