@@ -44,13 +44,9 @@ func New() *Cron {
 // New 添加一个新的定时任务
 func (c *Cron) New(name string, f JobFunc, n Nexter) {
 	c.jobs = append(c.jobs, &Job{
-		name: "",
-		f:    f,
-		next: n,
+		name:  name,
+		f:     f,
+		next:  n,
+		state: Stoped,
 	})
-}
-
-// NewTicker 添加一个新的定时任务
-func (c *Cron) NewTicker(name string, f JobFunc, dur time.Duration) {
-	c.New(name, f, newDuration(dur))
 }

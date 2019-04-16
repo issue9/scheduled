@@ -5,7 +5,11 @@
 package cron
 
 import (
+	"errors"
+	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -30,10 +34,6 @@ func sortUint8(vals []uint8) {
 
 // Title 获取标题名称
 func (e *Expr) Title() string {
-	if e.title == "" {
-		// TODO
-	}
-
 	return e.title
 }
 
@@ -78,8 +78,129 @@ func (e *Expr) Next(last time.Time) time.Time {
 	return time.Date(year, time.Month(month), day, hour, minute, second, 0, last.Location())
 }
 
-// Range 获取一个范围内的整数
-func Range(start, end uint8) []uint8 {
+// NewExpr 新建表达式定时器
+//
+// expr 的值可以是：
+//  * * * * * *  cmd
+//  | | | | | |
+//  | | | | | --- 星期
+//  | | | | ----- 月
+//  | | | ------- 日
+//  | | --------- 小时
+//  | ----------- 分
+//  ------------- 秒
+//
+// 支持以下符号：
+//  - 表示范围
+//  , 表示和
+func (c *Cron) NewExpr(name string, f JobFunc, expr string) error {
+	next, err := parseExpr(expr)
+	if err != nil {
+		return err
+	}
+
+	c.New(name, f, next)
+	return nil
+}
+
+func parseExpr(spec string) (*Expr, error) {
+	fields := strings.Fields(spec)
+	if len(fields) != 6 {
+		return nil, errors.New("长度不正确")
+	}
+
+	e := &Expr{
+		title: spec,
+	}
+	var err error
+
+	e.seconds, err = parseField(fields[0])
+	if err != nil {
+		return nil, err
+	}
+
+	e.minutes, err = parseField(fields[1])
+	if err != nil {
+		return nil, err
+	}
+
+	e.hours, err = parseField(fields[2])
+	if err != nil {
+		return nil, err
+	}
+
+	e.days, err = parseField(fields[3])
+	if err != nil {
+		return nil, err
+	}
+
+	e.months, err = parseField(fields[4])
+	if err != nil {
+		return nil, err
+	}
+
+	e.weeks, err = parseField(fields[5])
+	if err != nil {
+		return nil, err
+	}
+
+	return e, nil
+}
+
+// 分析单个数字域内容
+//
+// field 可以是以下格式：
+//  *
+//  n1-n2
+//  n1,n2
+//  n1-n2,n3-n4,n5
+func parseField(field string) ([]uint8, error) {
+	if field == "*" {
+		return nil, nil
+	}
+
+	fields := strings.FieldsFunc(field, func(r rune) bool { return r == ',' })
+	ret := make([]uint8, 0, len(fields))
+
+	for _, v := range fields {
+		if len(v) <= 2 {
+			n, err := strconv.ParseUint(v, 10, 8)
+			if err != nil {
+				return nil, err
+			}
+			ret = append(ret, uint8(n))
+			continue
+		}
+
+		index := strings.IndexByte(v, '-')
+		if index >= 0 {
+			v1 := v[:index]
+			v2 := v[index+1:]
+			n1, err := strconv.ParseUint(v1, 10, 8)
+			if err != nil {
+				return nil, err
+			}
+			n2, err := strconv.ParseUint(v2, 10, 8)
+			if err != nil {
+				return nil, err
+			}
+
+			ret = append(ret, intRange(uint8(n1), uint8(n2))...)
+		}
+	}
+
+	// 排序，查重
+	sortUint8(ret)
+	for i := 1; i < len(ret); i++ {
+		if ret[i] == ret[i-1] {
+			return nil, fmt.Errorf("存在相同的值 %d", ret[i])
+		}
+	}
+	return ret, nil
+}
+
+// 获取一个范围内的整数
+func intRange(start, end uint8) []uint8 {
 	r := make([]uint8, 0, end-start+1)
 	for i := start; i <= end; i++ {
 		r = append(r, i)
@@ -121,76 +242,4 @@ func next(curr uint8, list []uint8, carry bool) (val int, c bool) {
 
 	// 大于当前列表的最大值，则返回列表中的最大值，则设置进位标记
 	return int(list[0]), true
-}
-
-// Seconds 表示秒数，0-59
-func (e *Expr) Seconds(s ...uint8) *Expr {
-	e.seconds = s
-	sortUint8(e.seconds)
-	return e
-}
-
-// Minutes 指定分钟数，0-59
-func (e *Expr) Minutes(m ...uint8) *Expr {
-	e.minutes = m
-	sortUint8(e.minutes)
-	return e
-}
-
-// Hours 指定小时，0-23
-func (e *Expr) Hours(h ...uint8) *Expr {
-	e.hours = h
-	sortUint8(e.hours)
-	return e
-}
-
-// Days 指定天数，1-31
-func (e *Expr) Days(d ...uint8) *Expr {
-	e.days = d
-	sortUint8(e.days)
-	return e
-}
-
-// Months 指定月份，1-12
-func (e *Expr) Months(m ...uint8) *Expr {
-	e.months = m
-	sortUint8(e.months)
-	return e
-}
-
-// Weeks 指定星期，0-6，其中 0 表示周日
-func (e *Expr) Weeks(w ...uint8) *Expr {
-	e.weeks = w
-	sortUint8(e.weeks)
-	return e
-}
-
-// Seconds 表示秒数，0-59
-func Seconds(s ...uint8) *Expr {
-	return (&Expr{}).Seconds(s...)
-}
-
-// Minutes 指定分钟数，0-59
-func Minutes(m ...uint8) *Expr {
-	return (&Expr{}).Minutes(m...)
-}
-
-// Hours 指定小时，0-23
-func Hours(h ...uint8) *Expr {
-	return (&Expr{}).Hours(h...)
-}
-
-// Days 指定天数，1-31
-func Days(d ...uint8) *Expr {
-	return (&Expr{}).Days(d...)
-}
-
-// Months 指定月份，1-12
-func Months(m ...uint8) *Expr {
-	return (&Expr{}).Months(m...)
-}
-
-// Weeks 指定星期，0-6，其中 0 表示周日
-func Weeks(w ...uint8) *Expr {
-	return (&Expr{}).Weeks(w...)
 }

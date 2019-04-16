@@ -40,3 +40,8 @@ func (d *duration) Next(last time.Time) time.Time {
 func (d *duration) Title() string {
 	return d.title
 }
+
+// NewTicker 添加一个新的定时任务
+func (c *Cron) NewTicker(name string, f JobFunc, dur time.Duration) {
+	c.New(name, f, newDuration(dur))
+}
