@@ -13,17 +13,38 @@ import (
 	"time"
 )
 
+// 该值的顺序与 cron 中语法的顺序相同
+const (
+	secondIndex = iota
+	minuteIndex
+	hourIndex
+	dayIndex
+	monthIndex
+	weekIndex
+)
+
+type bound struct{ min, max uint8 }
+
 // Expr 表达式的分析结果
 type Expr struct {
-	seconds []uint8 // 0-59
-	minutes []uint8 // 0-59
-	days    []uint8 // 1-31
-	hours   []uint8 // 0-23
-	months  []uint8 // 1-12
-	weeks   []uint8 // 0-7
+	data [][]uint8
 
 	next  time.Time
 	title string
+}
+
+// 每种类型的值取值范围
+var bounds = []bound{
+	bound{min: 0, max: 59}, // secondIndex
+	bound{min: 0, max: 59}, // minuteIndex
+	bound{min: 0, max: 23}, // hourIndex
+	bound{min: 1, max: 31}, // dayIndex
+	bound{min: 1, max: 12}, // monthIndex
+	bound{min: 0, max: 6},  // wwekIndex
+}
+
+func (b bound) valid(v uint8) bool {
+	return v >= b.min && v <= b.max
 }
 
 func sortUint8(vals []uint8) {
@@ -43,20 +64,20 @@ func (e *Expr) Next(last time.Time) time.Time {
 		return e.next
 	}
 
-	second, carry := next(uint8(last.Second()), e.seconds, false)
-	minute, carry := next(uint8(last.Minute()), e.minutes, carry)
-	hour, carry := next(uint8(last.Hour()), e.hours, carry)
+	second, carry := next(uint8(last.Second()), e.data[secondIndex], false)
+	minute, carry := next(uint8(last.Minute()), e.data[minuteIndex], carry)
+	hour, carry := next(uint8(last.Hour()), e.data[hourIndex], carry)
 
 	var day int
-	if e.weeks != nil { // 除非指定了星期，否则永远按照日期来
-		weekday, _ := next(uint8(last.Weekday()), e.weeks, carry)
+	if e.data[weekIndex] != nil { // 除非指定了星期，否则永远按照日期来
+		weekday, _ := next(uint8(last.Weekday()), e.data[weekIndex], carry)
 		dur := weekday - int(last.Weekday()) // 相差的天数
 		day = dur + last.Day()
 	} else {
-		day, carry = next(uint8(last.Day()), e.days, carry)
+		day, carry = next(uint8(last.Day()), e.data[dayIndex], carry)
 	}
 
-	month, carry := next(uint8(last.Month()), e.months, carry)
+	month, carry := next(uint8(last.Month()), e.data[monthIndex], carry)
 	year := last.Year()
 	if carry {
 		year++
@@ -69,7 +90,7 @@ func (e *Expr) Next(last time.Time) time.Time {
 			break
 		}
 
-		month, carry = next(uint8(month), e.months, false)
+		month, carry = next(uint8(month), e.data[monthIndex], false)
 		if carry {
 			year++
 		}
@@ -111,37 +132,23 @@ func parseExpr(spec string) (*Expr, error) {
 
 	e := &Expr{
 		title: spec,
-	}
-	var err error
-
-	e.seconds, err = parseField(fields[0])
-	if err != nil {
-		return nil, err
+		data:  make([][]uint8, 6, 6),
 	}
 
-	e.minutes, err = parseField(fields[1])
-	if err != nil {
-		return nil, err
-	}
+	for i, f := range fields {
+		vals, err := parseField(f)
+		if err != nil {
+			return nil, err
+		}
 
-	e.hours, err = parseField(fields[2])
-	if err != nil {
-		return nil, err
-	}
+		if vals != nil {
+			bound := bounds[i]
+			if !bound.valid(vals[0]) || !bound.valid(vals[len(vals)-1]) {
+				return nil, errors.New("值超出范围")
+			}
+		}
 
-	e.days, err = parseField(fields[3])
-	if err != nil {
-		return nil, err
-	}
-
-	e.months, err = parseField(fields[4])
-	if err != nil {
-		return nil, err
-	}
-
-	e.weeks, err = parseField(fields[5])
-	if err != nil {
-		return nil, err
+		e.data[i] = vals
 	}
 
 	return e, nil
