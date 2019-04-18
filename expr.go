@@ -35,7 +35,17 @@ func (e *Expr) Next(last time.Time) time.Time {
 		return e.next
 	}
 
-	second, carry := next(uint8(last.Second()), e.data[secondIndex], false)
+	next := e.nextTime(last, false)
+	if next.Unix() == last.Unix() { // 相等（不考虑秒以下的内容），则需要重新计算
+		next = e.nextTime(last, true)
+	}
+
+	e.next = next
+	return next
+}
+
+func (e *Expr) nextTime(last time.Time, carry bool) time.Time {
+	second, carry := next(uint8(last.Second()), e.data[secondIndex], carry)
 	minute, carry := next(uint8(last.Minute()), e.data[minuteIndex], carry)
 	hour, carry := next(uint8(last.Hour()), e.data[hourIndex], carry)
 
@@ -61,7 +71,7 @@ func (e *Expr) Next(last time.Time) time.Time {
 			break
 		}
 
-		month, carry = next(uint8(month), e.data[monthIndex], false)
+		month, carry = next(uint8(month), e.data[monthIndex], true)
 		if carry {
 			year++
 		}

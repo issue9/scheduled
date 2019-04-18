@@ -5,6 +5,9 @@
 package cron
 
 import (
+	"fmt"
+	"math"
+	"strconv"
 	"testing"
 	"time"
 
@@ -12,6 +15,90 @@ import (
 )
 
 var _ Nexter = &Expr{}
+
+const day = 24 * time.Hour
+
+func TestExpr_Next(t *testing.T) {
+	a := assert.New(t)
+
+	type test struct {
+		expr  string
+		times []time.Time // 前一个是后一个的参数
+	}
+
+	base := time.Date(2019, 1, 1, 0, 0, 0, 123, time.UTC)
+	week := time.Wednesday
+	weekdur := time.Duration(math.Abs(float64(base.Weekday()-week))) * day
+	var data = []*test{
+		&test{
+			expr: "1 * * * * *",
+			times: []time.Time{
+				base,
+				base.Add(1 * time.Second),
+				base.Add(1 * time.Second).Add(1 * time.Minute), // 进位
+				base.Add(1 * time.Second).Add(2 * time.Minute),
+				base.Add(1 * time.Second).Add(3 * time.Minute),
+			},
+		},
+
+		&test{
+			expr: "1 22 3 * * *",
+			times: []time.Time{
+				base,
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour),
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(day),
+			},
+		},
+
+		&test{
+			expr: "1 22 3 * * " + strconv.Itoa(int(week)),
+			times: []time.Time{
+				base,
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur),
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(7 * day), // 添加一周
+			},
+		},
+
+		&test{
+			expr: "1 22 3 31 * *",
+			times: []time.Time{
+				base,
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(30 * day),
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add((30 + 28 + 31) * day),                                                             // 3 月
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add((30 + 28 + 31 + 30 + 31) * day),                                                   // 5 月
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add((30 + 28 + 31 + 30 + 31 + 30 + 31) * day),                                         // 7 月
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add((30 + 28 + 31 + 30 + 31 + 30 + 31 + 31) * day),                                    // 8 月
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add((30 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31) * day),                          // 10 月
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add((30 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 31) * day),                // 12 月
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add((30 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 31 + 31) * day),           // 2020.1 月
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add((30 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 31 + 31 + 29 + 31) * day), // 2020.3 月
+			},
+		},
+	}
+
+	for i, t := range data {
+		if len(t.times) < 2 {
+			panic(fmt.Sprintf("%d times 最少两个元素", i))
+		}
+
+		next, err := parseExpr(t.expr)
+		a.NotError(err).NotNil(next)
+
+		for j := 1; j < len(t.times); j++ {
+			last := t.times[j-1]
+			n := next.Next(last)
+
+			curr := t.times[j]
+
+			a.Equal(n.Year(), curr.Year(), "year 不同在 %d.times[%d]，%d:%d 个元素", i, j, n.Year(), curr.Year()).
+				Equal(n.Month(), curr.Month(), "month 不同在 %d.times[%d]，%d:%d 个元素", i, j, n.Month(), curr.Month()).
+				Equal(n.Day(), curr.Day(), "day 不同在 %d.times[%d]，%d:%d 个元素", i, j, n.Day(), curr.Day()).
+				Equal(n.Hour(), curr.Hour(), "hour 不同在 %d.times[%d]，%d:%d 个元素", i, j, n.Hour(), curr.Hour()).
+				Equal(n.Minute(), curr.Minute(), "minute 不同在 %d.times[%d]，%d:%d 个元素", i, j, n.Minute(), curr.Minute()).
+				Equal(n.Second(), curr.Second(), "second 不同在 %d.times[%d]，%d:%d 个元素", i, j, n.Second(), curr.Second())
+		}
+	}
+}
 
 func TestGetMonthDays(t *testing.T) {
 	a := assert.New(t)

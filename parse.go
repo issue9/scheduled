@@ -12,7 +12,16 @@ import (
 	"strings"
 )
 
-type bound struct{ min, max uint8 }
+// TODO 可以解析以下内容
+//
+// @reboot        Run once, at startup.
+// @yearly         Run once a year, "0 0 1 1 *".
+// @annually      (same as @yearly)
+// @monthly       Run once a month, "0 0 1 * *".
+// @weekly        Run once a week, "0 0 * * 0".
+// @daily           Run once a day, "0 0 * * *".
+// @midnight      (same as @daily)
+// @hourly         Run once an hour, "0 * * * *".
 
 // 每种类型的值取值范围
 var bounds = []bound{
@@ -23,6 +32,8 @@ var bounds = []bound{
 	bound{min: 1, max: 12}, // monthIndex
 	bound{min: 0, max: 6},  // wwekIndex
 }
+
+type bound struct{ min, max uint8 }
 
 func (b bound) valid(v uint8) bool {
 	return v >= b.min && v <= b.max
