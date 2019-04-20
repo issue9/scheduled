@@ -6,7 +6,6 @@ package cron
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 	"testing"
 	"time"
@@ -28,7 +27,11 @@ func TestExpr_Next(t *testing.T) {
 
 	base := time.Date(2019, 1, 1, 0, 0, 0, 123, time.UTC)
 	week := time.Wednesday
-	weekdur := time.Duration(math.Abs(float64(base.Weekday()-week))) * day
+	wdays := week - base.Weekday()
+	if wdays < 0 {
+		wdays += 7
+	}
+	weekdur := time.Duration(wdays) * day
 	var data = []*test{
 		&test{
 			expr: "1 * * * * *",
@@ -50,12 +53,13 @@ func TestExpr_Next(t *testing.T) {
 			},
 		},
 
-		&test{
+		&test{ // 未指定日，只指定了星期
 			expr: "1 22 3 * * " + strconv.Itoa(int(week)),
 			times: []time.Time{
 				base,
 				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur),
-				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(7 * day), // 添加一周
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(7 * day),  // 添加一周
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(14 * day), // 添加一周
 			},
 		},
 
