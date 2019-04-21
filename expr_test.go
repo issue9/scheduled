@@ -25,7 +25,7 @@ func TestExpr_Next(t *testing.T) {
 		times []time.Time // 前一个是后一个的参数
 	}
 
-	base := time.Date(2019, 1, 1, 0, 0, 0, 123, time.UTC)
+	base := time.Date(2019, 1, 1, 0, 0, 0, 123, time.UTC) // 周二
 	week := time.Wednesday
 	wdays := week - base.Weekday()
 	if wdays < 0 {
@@ -58,8 +58,25 @@ func TestExpr_Next(t *testing.T) {
 			times: []time.Time{
 				base,
 				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur),
-				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(7 * day),  // 添加一周
-				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(14 * day), // 添加一周
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(7 * day),
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(2 * 7 * day),
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(3 * 7 * day),
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(4 * 7 * day),
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(5 * 7 * day),
+			},
+		},
+
+		&test{ // 指定了日和星期
+			expr: "1 22 3 5 * " + strconv.Itoa(int(week)),
+			times: []time.Time{
+				base,
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur),                                    // 周 3，2 号
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(3 * day),                       // 周 6，5 号
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4) * day),                 // 周 3，9 号
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4 + 7) * day),             // 周 3，16
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4 + 7 + 7) * day),         // 3, 23
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4 + 7 + 7 + 7) * day),     // 3, 30
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4 + 7 + 7 + 7 + 6) * day), // 2, 2.6
 			},
 		},
 
@@ -154,6 +171,7 @@ func TestNext(t *testing.T) {
 
 	type test struct {
 		// 输入
+		typ   int
 		curr  uint8
 		list  []uint8
 		carry bool
@@ -165,6 +183,7 @@ func TestNext(t *testing.T) {
 
 	var data = []*test{
 		&test{
+			typ:   secondIndex,
 			curr:  0,
 			list:  []uint8{1, 3, 5},
 			carry: true,
@@ -173,6 +192,7 @@ func TestNext(t *testing.T) {
 		},
 
 		&test{
+			typ:   secondIndex,
 			curr:  1,
 			list:  []uint8{1, 3, 5},
 			carry: false,
@@ -181,6 +201,7 @@ func TestNext(t *testing.T) {
 		},
 
 		&test{
+			typ:   secondIndex,
 			curr:  1,
 			list:  []uint8{1, 3, 5},
 			carry: true,
@@ -189,6 +210,7 @@ func TestNext(t *testing.T) {
 		},
 
 		&test{
+			typ:   secondIndex,
 			curr:  5,
 			list:  []uint8{1, 3, 5},
 			carry: false,
@@ -197,6 +219,23 @@ func TestNext(t *testing.T) {
 		},
 
 		&test{
+			typ:   secondIndex,
+			curr:  59,
+			carry: false,
+			v:     59,
+			c:     false,
+		},
+
+		&test{
+			typ:   secondIndex,
+			curr:  59,
+			carry: true,
+			v:     0,
+			c:     true,
+		},
+
+		&test{
+			typ:   secondIndex,
 			curr:  5,
 			list:  []uint8{1, 3, 5},
 			carry: true,
@@ -205,6 +244,7 @@ func TestNext(t *testing.T) {
 		},
 
 		&test{
+			typ:   secondIndex,
 			curr:  5,
 			list:  nil,
 			carry: true,
@@ -213,6 +253,7 @@ func TestNext(t *testing.T) {
 		},
 
 		&test{
+			typ:   secondIndex,
 			curr:  5,
 			list:  nil,
 			carry: false,
@@ -222,7 +263,7 @@ func TestNext(t *testing.T) {
 	}
 
 	for _, item := range data {
-		v, c := next(item.curr, item.list, item.carry)
+		v, c := next(item.typ, item.curr, item.list, item.carry)
 		a.Equal(v, item.v).
 			Equal(c, item.c)
 	}

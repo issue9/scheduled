@@ -45,14 +45,25 @@ func (e *Expr) Next(last time.Time) time.Time {
 }
 
 func (e *Expr) nextTime(last time.Time, carry bool) time.Time {
-	second, carry := next(uint8(last.Second()), e.data[secondIndex], carry)
-	minute, carry := next(uint8(last.Minute()), e.data[minuteIndex], carry)
-	hour, carry := next(uint8(last.Hour()), e.data[hourIndex], carry)
+	second, carry := next(secondIndex, uint8(last.Second()), e.data[secondIndex], carry)
+	minute, carry := next(minuteIndex, uint8(last.Minute()), e.data[minuteIndex], carry)
+	hour, carry := next(hourIndex, uint8(last.Hour()), e.data[hourIndex], carry)
 
-	day, carry := e.nextDay(last, carry)
+	var month, day uint8
+	var year int
+	if e.data[weekIndex] != nil {
+		year, month, day = e.nextWeekDay(last, carry)
+	} else {
+		year, month, day = e.nextMonthDay(last, carry)
+	}
 
-	month, carry := next(uint8(last.Month()), e.data[monthIndex], carry)
-	year := last.Year()
+	return time.Date(year, time.Month(month), int(day), int(hour), int(minute), int(second), 0, last.Location())
+}
+
+func (e *Expr) nextMonthDay(last time.Time, carry bool) (year int, month, day uint8) {
+	day, carry = next(dayIndex, uint8(last.Day()), e.data[dayIndex], carry)
+	month, carry = next(monthIndex, uint8(last.Month()), e.data[monthIndex], carry)
+	year = last.Year()
 	if carry {
 		year++
 	}
@@ -64,38 +75,49 @@ func (e *Expr) nextTime(last time.Time, carry bool) time.Time {
 			break
 		}
 
-		month, carry = next(uint8(month), e.data[monthIndex], true)
+		month, carry = next(monthIndex, uint8(month), e.data[monthIndex], true)
 		if carry {
 			year++
 		}
 	}
 
-	return time.Date(year, time.Month(month), int(day), int(hour), int(minute), int(second), 0, last.Location())
+	return year, month, day
 }
 
-func (e *Expr) nextDay(last time.Time, carry bool) (day uint8, c bool) {
-	if e.data[weekIndex] == nil {
-		return next(uint8(last.Day()), e.data[dayIndex], carry)
-	}
-
+func (e *Expr) nextWeekDay(last time.Time, carry bool) (year int, month, day uint8) {
 	// 计算 week day 在当前月份中的日期
-	wday, _ := next(uint8(last.Weekday()), e.data[weekIndex], carry)
+	wday, _ := next(weekIndex, uint8(last.Weekday()), e.data[weekIndex], carry)
 	dur := wday - uint8(last.Weekday()) // 相差的天数
-	if dur < 0 {
+	if dur <= 0 {
 		dur += 7
 	}
-	weekday := dur + uint8(last.Day())
-
-	if e.data[dayIndex] == nil {
-		return weekday, false
-	}
+	day = dur + uint8(last.Day())
 
 	// 如果 day 字段不为空，则还需要比较两者之间哪个值更接近
-	day, carry = next(uint8(last.Day()), e.data[dayIndex], carry)
-	if weekday < day {
-		return weekday, false
+	if e.data[dayIndex] != nil {
+		wday, carry = next(dayIndex, uint8(last.Day()), e.data[dayIndex], carry)
+		if !carry && (wday < day) {
+			day = wday
+		}
 	}
-	return day, carry
+
+	month, _ = next(monthIndex, uint8(last.Month()), e.data[monthIndex], carry)
+	year = last.Year()
+	// 由于月份中的天数不固定，还得计算该天数是否存在于当前月分
+	for {
+		days := getMonthDays(time.Month(month), year)
+		if day <= days { // 天数存在于当前月，则退出循环
+			break
+		}
+
+		month, carry = next(monthIndex, uint8(month), e.data[monthIndex], true)
+		if carry {
+			year++
+		}
+		day -= days
+	}
+
+	return year, month, day
 }
 
 // 获取指定月份的天数
@@ -110,10 +132,15 @@ func getMonthDays(month time.Month, year int) uint8 {
 // carry 是否需要当前时间进位；
 // val 返回计算后的最近一个时间值；
 // c 是否已经进位。
-func next(curr uint8, list []uint8, carry bool) (val uint8, c bool) {
+func next(typ int, curr uint8, list []uint8, carry bool) (val uint8, c bool) {
 	if list == nil {
 		if carry {
 			curr++
+		}
+
+		b := bounds[typ]
+		if curr > b.max {
+			return b.min, true
 		}
 		return curr, false
 	}
