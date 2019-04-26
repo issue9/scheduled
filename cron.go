@@ -5,12 +5,15 @@
 // Package cron 定时任务
 package cron
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // 表示任务状态
 const (
-	Running State = 1 << iota
-	Stoped
+	Stoped State = iota
+	Running
 	Failed
 )
 
@@ -19,7 +22,8 @@ type State int8
 
 // Cron 管理所有的定时任务
 type Cron struct {
-	jobs []*Job
+	jobs     []*Job
+	channels chan *Job
 }
 
 // JobFunc 每一个定时任务实际上执行的函数签名
@@ -49,4 +53,24 @@ func (c *Cron) New(name string, f JobFunc, n Nexter) {
 		next:  n,
 		state: Stoped,
 	})
+}
+
+// Serve 运行服务
+func (c *Cron) Serve(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return context.Canceled
+		case j := <-c.channels:
+			go func(j *Job) {
+				if err := j.f(); err != nil {
+					// TODO
+				}
+
+				now := j.next.Next(j.last)
+				j.last = now
+				// TODO
+			}(j)
+		}
+	}
 }

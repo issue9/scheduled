@@ -129,9 +129,9 @@ func getMonthDays(month time.Month, year int) uint8 {
 
 // curr 当前的时间值；
 // list 可用的时间值；
-// carry 是否需要当前时间进位；
+// carry 前一个数值是否已经进位；
 // val 返回计算后的最近一个时间值；
-// c 是否已经进位。
+// c 是否需要一个值进位。
 func next(typ int, curr uint8, list []uint8, carry bool) (val uint8, c bool) {
 	if list == nil {
 		if carry {

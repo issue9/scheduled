@@ -45,6 +45,17 @@ func TestExpr_Next(t *testing.T) {
 		},
 
 		&test{
+			expr: "* 1 * * * *",
+			times: []time.Time{
+				base,
+				base.Add(1 * time.Minute),
+				base.Add(1 * time.Minute).Add(1 * time.Hour), // 进位
+				base.Add(1 * time.Minute).Add(2 * time.Hour),
+				base.Add(1 * time.Minute).Add(3 * time.Hour),
+			},
+		},
+
+		&test{
 			expr: "1 22 3 * * *",
 			times: []time.Time{
 				base,
