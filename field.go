@@ -12,17 +12,6 @@ import (
 	"strings"
 )
 
-// TODO 可以解析以下内容
-//
-// @reboot        Run once, at startup.
-// @yearly         Run once a year, "0 0 1 1 *".
-// @annually      (same as @yearly)
-// @monthly       Run once a month, "0 0 1 * *".
-// @weekly        Run once a week, "0 0 * * 0".
-// @daily           Run once a day, "0 0 * * *".
-// @midnight      (same as @daily)
-// @hourly         Run once an hour, "0 * * * *".
-
 const (
 	// any 和 step 是两个特殊的标记位，需要大于 60（所有字段中，秒数越最大，
 	// 但不会超过 60）
@@ -35,6 +24,18 @@ const (
 	// 每次计算时，按其当前值加 1 即可。
 	step = 1 << 62
 )
+
+// 常用的便捷指令
+var direct = map[string]string{
+	//"@reboot":   "TODO",
+	"@yearly":   "0 0 0 1 1 *",
+	"@annually": "0 0 0 1 1 *",
+	"@monthly":  "0 0 0 1 * *",
+	"@weekly":   "0 0 0 * * 0",
+	"@daily":    "0 0 0 * * *",
+	"@midnight": "0 0 0 * * *",
+	"@hourly":   "0 0 * * * *",
+}
 
 var fields = []field{
 	field{min: 0, max: 59}, // secondIndex
@@ -107,6 +108,18 @@ func sortUint64(vals []uint64) {
 }
 
 func parseExpr(spec string) (*Expr, error) {
+	if spec == "" {
+		return nil, errors.New("参数 spec 错误")
+	}
+
+	if spec[0] == '@' {
+		d, found := direct[spec]
+		if !found {
+			return nil, errors.New("款找到指令" + spec)
+		}
+		spec = d
+	}
+
 	fs := strings.Fields(spec)
 	if len(fs) != typeSize {
 		return nil, errors.New("长度不正确")

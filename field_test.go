@@ -211,6 +211,20 @@ func TestParseExpr(t *testing.T) {
 			expr: "* 3 * * * 6",
 			vals: []uint64{any, pow2(3), step, step, step, pow2(6)},
 		},
+		&expr{
+			expr: "@daily",
+			vals: []uint64{pow2(0), pow2(0), pow2(0), step, step, step},
+		},
+		&expr{ // 参数错误
+			expr:   "",
+			hasErr: true,
+			vals:   nil,
+		},
+		&expr{ // 指令不存在
+			expr:   "@not-exists",
+			hasErr: true,
+			vals:   nil,
+		},
 		&expr{ // 解析错误
 			expr:   "* * * * * 7-a",
 			hasErr: true,
