@@ -17,6 +17,14 @@ var _ Nexter = &Expr{}
 
 const day = 24 * time.Hour
 
+func TestCron_NewExpr(t *testing.T) {
+	a := assert.New(t)
+
+	c := New()
+	a.NotError(c.NewExpr("test", nil, "* * * 3-7 * *"))
+	a.Error(c.NewExpr("test", nil, "* * * 3-7a * *"))
+}
+
 func TestExpr_Next(t *testing.T) {
 	a := assert.New(t)
 
@@ -77,6 +85,23 @@ func TestExpr_Next(t *testing.T) {
 			},
 		},
 
+		/*
+			&test{ // 未指定日，只指定了星期，以及跨月份
+				expr: "1 22 3 * 3,7 " + strconv.Itoa(int(week)),
+				times: []time.Time{
+					base,
+					base.Add(1*time.Second).Add(22*time.Minute).Add(3*time.Hour).Add(weekdur).AddDate(0, 2, 0), // 3 月
+					base.Add(1*time.Second).Add(22*time.Minute).Add(3*time.Hour).Add(weekdur).AddDate(0, 4, 0),
+					base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(2 * 7 * day),
+					base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(3 * 7 * day),
+					base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(4 * 7 * day),
+					base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(5 * 7 * day),
+				},
+			},
+		*/
+
+		// TODO 2.29 的相关测试
+
 		&test{ // 指定了日和星期
 			expr: "1 22 3 5 * " + strconv.Itoa(int(week)),
 			times: []time.Time{
@@ -84,15 +109,15 @@ func TestExpr_Next(t *testing.T) {
 				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur),                                    // 周 3，2 号
 				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add(3 * day),                       // 周 6，5 号
 				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4) * day),                 // 周 3，9 号
-				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4 + 7) * day),             // 周 3，16
-				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4 + 7 + 7) * day),         // 3, 23
-				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4 + 7 + 7 + 7) * day),     // 3, 30
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4 + 7) * day),             // 周 3，1.16
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4 + 7 + 7) * day),         // 3, 1.23
+				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4 + 7 + 7 + 7) * day),     // 3, 1.30
 				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(weekdur).Add((3 + 4 + 7 + 7 + 7 + 6) * day), // 2, 2.6
 			},
 		},
 
 		&test{
-			expr: "1 22 3 31 * *",
+			expr: "1 22 3 31 * *", // 每个月 31 号
 			times: []time.Time{
 				base,
 				base.Add(1 * time.Second).Add(22 * time.Minute).Add(3 * time.Hour).Add(30 * day),
@@ -122,12 +147,12 @@ func TestExpr_Next(t *testing.T) {
 
 			curr := t.times[j]
 
-			a.Equal(n.Year(), curr.Year(), "year 不同在 %d.times[%d]，%d:%d 个元素", i, j, n.Year(), curr.Year()).
-				Equal(n.Month(), curr.Month(), "month 不同在 %d.times[%d]，%d:%d 个元素", i, j, n.Month(), curr.Month()).
-				Equal(n.Day(), curr.Day(), "day 不同在 %d.times[%d]，%d:%d 个元素", i, j, n.Day(), curr.Day()).
-				Equal(n.Hour(), curr.Hour(), "hour 不同在 %d.times[%d]，%d:%d 个元素", i, j, n.Hour(), curr.Hour()).
-				Equal(n.Minute(), curr.Minute(), "minute 不同在 %d.times[%d]，%d:%d 个元素", i, j, n.Minute(), curr.Minute()).
-				Equal(n.Second(), curr.Second(), "second 不同在 %d.times[%d]，%d:%d 个元素", i, j, n.Second(), curr.Second())
+			a.Equal(n.Year(), curr.Year(), "year 不同在 %d.times[%d]，返回值：%d，期望值：%d", i, j, n.Year(), curr.Year()).
+				Equal(n.Month(), curr.Month(), "month 不同在 %d.times[%d]，返回值：%d，期望值：%d", i, j, n.Month(), curr.Month()).
+				Equal(n.Day(), curr.Day(), "day 不同在 %d.times[%d]，返回值：%d，期望值：%d", i, j, n.Day(), curr.Day()).
+				Equal(n.Hour(), curr.Hour(), "hour 不同在 %d.times[%d]，返回值：%d，期望值：%d", i, j, n.Hour(), curr.Hour()).
+				Equal(n.Minute(), curr.Minute(), "minute 不同在 %d.times[%d]，返回值：%d，期望值：%d", i, j, n.Minute(), curr.Minute()).
+				Equal(n.Second(), curr.Second(), "second 不同在 %d.times[%d]，返回值：%d，期望值：%d", i, j, n.Second(), curr.Second())
 		}
 	}
 }
@@ -177,105 +202,54 @@ func TestGetMonthDays(t *testing.T) {
 	}
 }
 
-func TestNext(t *testing.T) {
+func TestGetMonthWeekDay(t *testing.T) {
 	a := assert.New(t)
 
 	type test struct {
-		// 输入
-		typ   int
-		curr  uint8
-		list  []uint8
-		carry bool
+		// 输入值
+		year    int
+		month   time.Month
+		weekday time.Weekday
 
-		// 输出
-		v uint8
-		c bool
+		// 返回值
+		day uint8
 	}
 
-	var data = []*test{
+	data := []*test{
 		&test{
-			typ:   secondIndex,
-			curr:  0,
-			list:  []uint8{1, 3, 5},
-			carry: true,
-			v:     1,
-			c:     false,
+			year:    2019,
+			month:   time.May,
+			weekday: time.Wednesday,
+			day:     1,
 		},
-
 		&test{
-			typ:   secondIndex,
-			curr:  1,
-			list:  []uint8{1, 3, 5},
-			carry: false,
-			v:     1,
-			c:     false,
+			year:    2019,
+			month:   time.May,
+			weekday: time.Saturday,
+			day:     4,
 		},
-
 		&test{
-			typ:   secondIndex,
-			curr:  1,
-			list:  []uint8{1, 3, 5},
-			carry: true,
-			v:     3,
-			c:     false,
+			year:    2019,
+			month:   time.May,
+			weekday: time.Sunday,
+			day:     5,
 		},
-
 		&test{
-			typ:   secondIndex,
-			curr:  5,
-			list:  []uint8{1, 3, 5},
-			carry: false,
-			v:     5,
-			c:     false,
+			year:    2020,
+			month:   time.February,
+			weekday: time.Saturday,
+			day:     1,
 		},
-
 		&test{
-			typ:   secondIndex,
-			curr:  59,
-			carry: false,
-			v:     59,
-			c:     false,
-		},
-
-		&test{
-			typ:   secondIndex,
-			curr:  59,
-			carry: true,
-			v:     0,
-			c:     true,
-		},
-
-		&test{
-			typ:   secondIndex,
-			curr:  5,
-			list:  []uint8{1, 3, 5},
-			carry: true,
-			v:     1,
-			c:     true,
-		},
-
-		&test{
-			typ:   secondIndex,
-			curr:  5,
-			list:  nil,
-			carry: true,
-			v:     6,
-			c:     false,
-		},
-
-		&test{
-			typ:   secondIndex,
-			curr:  5,
-			list:  nil,
-			carry: false,
-			v:     5,
-			c:     false,
+			year:    2020,
+			month:   time.February,
+			weekday: time.Tuesday,
+			day:     4,
 		},
 	}
 
-	for _, item := range data {
-		v, c := next(item.typ, item.curr, item.list, item.carry)
-		a.Equal(v, item.v).
-			Equal(c, item.c)
+	for index, item := range data {
+		day := getMonthWeekDay(item.weekday, item.month, item.year)
+		a.Equal(day, item.day, "%d 出错，返回值：%d，期望值：%d", index, day, item.day)
 	}
 }

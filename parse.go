@@ -23,83 +23,51 @@ import (
 // @midnight      (same as @daily)
 // @hourly         Run once an hour, "0 * * * *".
 
-// 每种类型的值取值范围
-var bounds = []bound{
-	bound{min: 0, max: 59}, // secondIndex
-	bound{min: 0, max: 59}, // minuteIndex
-	bound{min: 0, max: 23}, // hourIndex
-	bound{min: 1, max: 31}, // dayIndex
-	bound{min: 1, max: 12}, // monthIndex
-	bound{min: 0, max: 6},  // wwekIndex
-}
-
-type bound struct{ min, max uint8 }
-
-func (b bound) valid(v uint8) bool {
-	return v >= b.min && v <= b.max
-}
-
-func sortUint8(vals []uint8) {
+func sortUint64(vals []uint64) {
 	sort.SliceStable(vals, func(i, j int) bool {
 		return vals[i] < vals[j]
 	})
 }
 
-// NewExpr 新建表达式定时器
-//
-// expr 的值可以是：
-//  * * * * * *  cmd
-//  | | | | | |
-//  | | | | | --- 星期
-//  | | | | ----- 月
-//  | | | ------- 日
-//  | | --------- 小时
-//  | ----------- 分
-//  ------------- 秒
-//
-// 支持以下符号：
-//  - 表示范围
-//  , 表示和
-func (c *Cron) NewExpr(name string, f JobFunc, expr string) error {
-	next, err := parseExpr(expr)
-	if err != nil {
-		return err
-	}
-
-	c.New(name, f, next)
-	return nil
-}
-
 func parseExpr(spec string) (*Expr, error) {
-	fields := strings.Fields(spec)
-	if len(fields) != 6 {
+	fs := strings.Fields(spec)
+	if len(fs) != typeSize {
 		return nil, errors.New("长度不正确")
 	}
 
 	e := &Expr{
-		title: spec,
-		data:  make([][]uint8, 6, 6),
+		title:      spec,
+		data:       make([]uint64, typeSize),
+		startIndex: -1,
 	}
 
-	null := true
-	for i, f := range fields {
-		vals, err := parseField(f)
+	allAny := true
+	for i, f := range fs {
+		vals, err := parseField(fields[i], f)
 		if err != nil {
 			return nil, err
 		}
 
-		if vals != nil {
-			null = false
-			bound := bounds[i]
-			if !bound.valid(vals[0]) || !bound.valid(vals[len(vals)-1]) {
-				return nil, errors.New("值超出范围")
-			}
+		if allAny && vals != any {
+			allAny = false
+		}
+
+		if !allAny && vals == any {
+			vals = step
+		}
+
+		if e.startIndex == -1 && !allAny {
+			e.startIndex = i
 		}
 
 		e.data[i] = vals
 	}
 
-	if null { // 所有项都为 *
+	if e.startIndex == -1 {
+		e.startIndex = 0
+	}
+
+	if allAny { // 所有项都为 *
 		return nil, errors.New("所有项都为 *")
 	}
 
@@ -113,21 +81,26 @@ func parseExpr(spec string) (*Expr, error) {
 //  n1-n2
 //  n1,n2
 //  n1-n2,n3-n4,n5
-func parseField(field string) ([]uint8, error) {
+func parseField(f field, field string) (uint64, error) {
 	if field == "*" {
-		return nil, nil
+		return any, nil
 	}
 
 	fields := strings.FieldsFunc(field, func(r rune) bool { return r == ',' })
-	ret := make([]uint8, 0, len(fields))
+	list := make([]uint64, 0, len(fields))
 
 	for _, v := range fields {
 		if len(v) <= 2 {
 			n, err := strconv.ParseUint(v, 10, 8)
 			if err != nil {
-				return nil, err
+				return 0, err
 			}
-			ret = append(ret, uint8(n))
+
+			if !f.valid(uint8(n)) {
+				return 0, fmt.Errorf("值 %d 超出范围", n)
+			}
+
+			list = append(list, n)
 			continue
 		}
 
@@ -137,30 +110,42 @@ func parseField(field string) ([]uint8, error) {
 			v2 := v[index+1:]
 			n1, err := strconv.ParseUint(v1, 10, 8)
 			if err != nil {
-				return nil, err
+				return 0, err
 			}
 			n2, err := strconv.ParseUint(v2, 10, 8)
 			if err != nil {
-				return nil, err
+				return 0, err
 			}
 
-			ret = append(ret, intRange(uint8(n1), uint8(n2))...)
+			if !f.valid(uint8(n1)) {
+				return 0, fmt.Errorf("值 %d 超出范围", n1)
+			}
+
+			if !f.valid(uint8(n2)) {
+				return 0, fmt.Errorf("值 %d 超出范围", n2)
+			}
+
+			list = append(list, intRange(n1, n2)...)
 		}
 	}
 
-	// 排序，查重
-	sortUint8(ret)
-	for i := 1; i < len(ret); i++ {
-		if ret[i] == ret[i-1] {
-			return nil, fmt.Errorf("存在相同的值 %d", ret[i])
+	sortUint64(list)
+	for i := 1; i < len(list); i++ {
+		if list[i] == list[i-1] {
+			return 0, fmt.Errorf("重复的值 %d", list[i])
 		}
+	}
+
+	var ret uint64
+	for _, v := range list {
+		ret |= (1 << v)
 	}
 	return ret, nil
 }
 
 // 获取一个范围内的整数
-func intRange(start, end uint8) []uint8 {
-	r := make([]uint8, 0, end-start+1)
+func intRange(start, end uint64) []uint64 {
+	r := make([]uint64, 0, end-start+1)
 	for i := start; i <= end; i++ {
 		r = append(r, i)
 	}
