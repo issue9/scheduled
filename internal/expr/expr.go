@@ -5,7 +5,11 @@
 // Package expr 实现了 cron 表达式的 Nexter 接口
 package expr
 
-import "time"
+import (
+	"errors"
+	"strings"
+	"time"
+)
 
 // 表示 cron 语法表达式中的顺序
 const (
@@ -17,6 +21,18 @@ const (
 	weekIndex
 	indexSize
 )
+
+// 常用的便捷指令
+var direct = map[string]string{
+	//"@reboot":   "TODO",
+	"@yearly":   "0 0 0 1 1 *",
+	"@annually": "0 0 0 1 1 *",
+	"@monthly":  "0 0 0 1 * *",
+	"@weekly":   "0 0 0 * * 0",
+	"@daily":    "0 0 0 * * *",
+	"@midnight": "0 0 0 * * *",
+	"@hourly":   "0 0 * * * *",
+}
 
 // Expr 表示 cron 表达式构建的 Nexter 接口实例
 type Expr struct {
@@ -39,103 +55,51 @@ func (e *Expr) Title() string {
 	return e.title
 }
 
-// Next 计算下个时间点，相对于 last
-func (e *Expr) Next(last time.Time) time.Time {
-	if e.next.After(last) {
-		return e.next
+// Parse 分析 spec 内容，得到 Expr 实例。
+func Parse(spec string) (*Expr, error) {
+	if spec == "" {
+		return nil, errors.New("参数 spec 错误")
 	}
 
-	e.next = e.nextTime(last, true)
-	return e.next
-}
-
-func (e *Expr) nextTime(last time.Time, carry bool) time.Time {
-	second, carry := fields[secondIndex].next(uint8(last.Second()), e.data[secondIndex], carry)
-	minute, carry := fields[minuteIndex].next(uint8(last.Minute()), e.data[minuteIndex], carry)
-	hour, carry := fields[hourIndex].next(uint8(last.Hour()), e.data[hourIndex], carry)
-
-	var year int
-	var month, day uint8
-	if e.data[weekIndex] != any && e.data[weekIndex] != step {
-		year, month, day = e.nextWeekDay(last, carry)
-	} else {
-		year, month, day = e.nextMonthDay(last, carry)
+	if spec[0] == '@' {
+		d, found := direct[spec]
+		if !found {
+			return nil, errors.New("未找到指令:" + spec)
+		}
+		spec = d
 	}
 
-	return time.Date(year, time.Month(month), int(day), int(hour), int(minute), int(second), 0, last.Location())
-}
-
-func (e *Expr) nextMonthDay(last time.Time, carry bool) (year int, month, day uint8) {
-	day, carry = fields[dayIndex].next(uint8(last.Day()), e.data[dayIndex], carry)
-	month, carry = fields[monthIndex].next(uint8(last.Month()), e.data[monthIndex], carry)
-	year = last.Year()
-	if carry {
-		year++
+	fs := strings.Fields(spec)
+	if len(fs) != indexSize {
+		return nil, errors.New("长度不正确")
 	}
 
-	for { // 由于月份中的天数不固定，还得计算该天数是否存在于当前月分
-		days := getMonthDays(time.Month(month), year)
-		if day <= days { // 天数存在于当前月，则退出循环
-			return year, month, day
+	e := &Expr{
+		title: spec,
+		data:  make([]uint64, indexSize),
+	}
+
+	allAny := true
+	for i, f := range fs {
+		vals, err := parseField(fields[i], f)
+		if err != nil {
+			return nil, err
 		}
 
-		month, carry = fields[monthIndex].next(uint8(month), e.data[monthIndex], true)
-		if carry {
-			year++
+		if allAny && vals != any {
+			allAny = false
 		}
-	}
-}
 
-func (e *Expr) nextWeekDay(last time.Time, carry bool) (year int, month, day uint8) {
-	// 计算 week day 在当前月份中的日期
-	wday, c := fields[weekIndex].next(uint8(last.Weekday()), e.data[weekIndex], carry)
-	dur := int(wday) - int(last.Weekday()) // 相差的天数
-	if (dur < 0) || (c && dur == 0) {
-		dur += 7
-	}
-	day = uint8(dur) + uint8(last.Day()) // wday 在当前月对应的天数
-	year = last.Year()
-
-	// 此处忽略返回的 c 参数。参数 carry 为 false，则肯定不会返回值为 true 的 carry
-	month, _ = fields[monthIndex].next(uint8(last.Month()), e.data[monthIndex], false)
-	if time.Month(month) != last.Month() {
-		day = getMonthWeekDay(time.Weekday(wday), time.Month(month), year)
-	} else if days := getMonthDays(time.Month(month), year); day > days {
-		// 跨月份，还有可能跨年份
-		month, c = fields[monthIndex].next(uint8(month), e.data[monthIndex], true)
-		if c {
-			year++
+		if !allAny && vals == any {
+			vals = step
 		}
-		day = getMonthWeekDay(time.Weekday(wday), time.Month(month), year)
+
+		e.data[i] = vals
 	}
 
-	// 同时设置了 day，需要比较两个值哪个更近
-	if e.data[dayIndex] != any && e.data[dayIndex] != step {
-		y, m, d := e.nextMonthDay(last, carry)
-		if !(year < y || month < m || day < d) {
-			year = y
-			month = m
-			day = d
-		}
+	if allAny { // 所有项都为 *
+		return nil, errors.New("所有项都为 *")
 	}
 
-	return year, month, day
-}
-
-// 获取指定月份的天数
-func getMonthDays(month time.Month, year int) uint8 {
-	first := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
-	last := first.AddDate(0, 1, -1)
-	return uint8(last.Day())
-}
-
-// 获取指定 year-month 下第一个符合 weekday 对应的天数
-func getMonthWeekDay(weekday time.Weekday, month time.Month, year int) uint8 {
-	first := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
-	weekday -= first.Weekday()
-	if weekday < 0 {
-		weekday += 7
-	}
-	last := first.AddDate(0, 0, int(weekday))
-	return uint8(last.Day())
+	return e, nil
 }

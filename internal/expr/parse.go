@@ -5,7 +5,6 @@
 package expr
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -25,18 +24,6 @@ const (
 	step = 1 << 62
 )
 
-// 常用的便捷指令
-var direct = map[string]string{
-	//"@reboot":   "TODO",
-	"@yearly":   "0 0 0 1 1 *",
-	"@annually": "0 0 0 1 1 *",
-	"@monthly":  "0 0 0 1 * *",
-	"@weekly":   "0 0 0 * * 0",
-	"@daily":    "0 0 0 * * *",
-	"@midnight": "0 0 0 * * *",
-	"@hourly":   "0 0 * * * *",
-}
-
 var fields = []field{
 	field{min: 0, max: 59}, // secondIndex
 	field{min: 0, max: 59}, // minuteIndex
@@ -52,108 +39,10 @@ func (f field) valid(v uint8) bool {
 	return v >= f.min && v <= f.max
 }
 
-// curr 当前的时间值；
-// list 可用的时间值；
-// carry 前一个数值是否已经进位；
-// val 返回计算后的最近一个时间值；
-// c 是否需要一个值进位。
-func (f field) next(curr uint8, list uint64, carry bool) (val uint8, c bool) {
-	if list == any {
-		return curr, carry
-	}
-
-	if list == step {
-		if carry {
-			curr++
-		}
-
-		if curr > f.max {
-			return f.min, true
-		}
-		return curr, false
-	}
-
-	var min uint8
-	var hasMin bool
-	for i := f.min; i <= f.max; i++ {
-		if ((uint64(1) << i) & list) <= 0 { // 该位未被设置为 1
-			continue
-		}
-
-		if i > curr {
-			return i, false
-		}
-
-		if !hasMin {
-			min = i
-			hasMin = true
-		}
-
-		if i == curr {
-			if !carry {
-				return i, false
-			}
-			carry = false
-		}
-	} // end for
-
-	// 大于当前列表的最大值，则返回列表中的最小值，并设置进位标记
-	return min, true
-}
-
 func sortUint64(vals []uint64) {
 	sort.SliceStable(vals, func(i, j int) bool {
 		return vals[i] < vals[j]
 	})
-}
-
-// Parse 分析 spec 内容，得到 Expr 实例。
-func Parse(spec string) (*Expr, error) {
-	if spec == "" {
-		return nil, errors.New("参数 spec 错误")
-	}
-
-	if spec[0] == '@' {
-		d, found := direct[spec]
-		if !found {
-			return nil, errors.New("未找到指令:" + spec)
-		}
-		spec = d
-	}
-
-	fs := strings.Fields(spec)
-	if len(fs) != indexSize {
-		return nil, errors.New("长度不正确")
-	}
-
-	e := &Expr{
-		title: spec,
-		data:  make([]uint64, indexSize),
-	}
-
-	allAny := true
-	for i, f := range fs {
-		vals, err := parseField(fields[i], f)
-		if err != nil {
-			return nil, err
-		}
-
-		if allAny && vals != any {
-			allAny = false
-		}
-
-		if !allAny && vals == any {
-			vals = step
-		}
-
-		e.data[i] = vals
-	}
-
-	if allAny { // 所有项都为 *
-		return nil, errors.New("所有项都为 *")
-	}
-
-	return e, nil
 }
 
 // 分析单个数字域内容
