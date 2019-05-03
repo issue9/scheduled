@@ -12,7 +12,7 @@ import (
 	"github.com/issue9/assert"
 )
 
-var _ Nexter = &Expr{}
+var _ Nexter = &expr{}
 
 func TestCron_NewExpr(t *testing.T) {
 	a := assert.New(t)

@@ -107,7 +107,7 @@ func sortUint64(vals []uint64) {
 	})
 }
 
-func parseExpr(spec string) (*Expr, error) {
+func parseExpr(spec string) (*expr, error) {
 	if spec == "" {
 		return nil, errors.New("参数 spec 错误")
 	}
@@ -125,7 +125,7 @@ func parseExpr(spec string) (*Expr, error) {
 		return nil, errors.New("长度不正确")
 	}
 
-	e := &Expr{
+	e := &expr{
 		title: spec,
 		data:  make([]uint64, typeSize),
 	}
