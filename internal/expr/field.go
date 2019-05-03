@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-package cron
+package expr
 
 import (
 	"errors"
@@ -107,7 +107,8 @@ func sortUint64(vals []uint64) {
 	})
 }
 
-func parseExpr(spec string) (*expr, error) {
+// Parse 分析 spec 内容，得到 Expr 实例。
+func Parse(spec string) (*Expr, error) {
 	if spec == "" {
 		return nil, errors.New("参数 spec 错误")
 	}
@@ -125,7 +126,7 @@ func parseExpr(spec string) (*expr, error) {
 		return nil, errors.New("长度不正确")
 	}
 
-	e := &expr{
+	e := &Expr{
 		title: spec,
 		data:  make([]uint64, indexSize),
 	}

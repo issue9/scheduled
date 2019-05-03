@@ -2,7 +2,8 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-package cron
+// Package expr 实现了 cron 表达式的 Nexter 接口
+package expr
 
 import "time"
 
@@ -17,7 +18,8 @@ const (
 	indexSize
 )
 
-type expr struct {
+// Expr 表示 cron 表达式构建的 Nexter 接口实例
+type Expr struct {
 	// 依次保存着 cron 语法中各个字段解析后的内容。
 	//
 	// 最长的秒数，最多 60 位，正好可以使用一个 uint64 保存，
@@ -32,49 +34,13 @@ type expr struct {
 	title string
 }
 
-// NewExpr 使用 cron 表示式新建一个定时任务
-//
-// expr 的值可以是：
-//  * * * * * *
-//  | | | | | |
-//  | | | | | --- 星期
-//  | | | | ----- 月
-//  | | | ------- 日
-//  | | --------- 小时
-//  | ----------- 分
-//  ------------- 秒
-//
-// 星期与日若同时存在，则以或的形式组合。
-//
-// 支持以下符号：
-//  - 表示范围
-//  , 表示和
-//
-// 同时支持以下便捷指令：
-//  @yearly:   0 0 0 1 1 *
-//  @annually: 0 0 0 1 1 *
-//  @monthly:  0 0 0 1 * *
-//  @weekly:   0 0 0 * * 0
-//  @daily:    0 0 0 * * *
-//  @midnight: 0 0 0 * * *
-//  @hourly:   0 0 * * * *
-func (c *Cron) NewExpr(name string, f JobFunc, expr string) error {
-	next, err := parseExpr(expr)
-	if err != nil {
-		return err
-	}
-
-	c.New(name, f, next)
-	return nil
-}
-
 // Title 获取标题名称
-func (e *expr) Title() string {
+func (e *Expr) Title() string {
 	return e.title
 }
 
 // Next 计算下个时间点，相对于 last
-func (e *expr) Next(last time.Time) time.Time {
+func (e *Expr) Next(last time.Time) time.Time {
 	if e.next.After(last) {
 		return e.next
 	}
@@ -83,7 +49,7 @@ func (e *expr) Next(last time.Time) time.Time {
 	return e.next
 }
 
-func (e *expr) nextTime(last time.Time, carry bool) time.Time {
+func (e *Expr) nextTime(last time.Time, carry bool) time.Time {
 	second, carry := fields[secondIndex].next(uint8(last.Second()), e.data[secondIndex], carry)
 	minute, carry := fields[minuteIndex].next(uint8(last.Minute()), e.data[minuteIndex], carry)
 	hour, carry := fields[hourIndex].next(uint8(last.Hour()), e.data[hourIndex], carry)
@@ -99,7 +65,7 @@ func (e *expr) nextTime(last time.Time, carry bool) time.Time {
 	return time.Date(year, time.Month(month), int(day), int(hour), int(minute), int(second), 0, last.Location())
 }
 
-func (e *expr) nextMonthDay(last time.Time, carry bool) (year int, month, day uint8) {
+func (e *Expr) nextMonthDay(last time.Time, carry bool) (year int, month, day uint8) {
 	day, carry = fields[dayIndex].next(uint8(last.Day()), e.data[dayIndex], carry)
 	month, carry = fields[monthIndex].next(uint8(last.Month()), e.data[monthIndex], carry)
 	year = last.Year()
@@ -120,7 +86,7 @@ func (e *expr) nextMonthDay(last time.Time, carry bool) (year int, month, day ui
 	}
 }
 
-func (e *expr) nextWeekDay(last time.Time, carry bool) (year int, month, day uint8) {
+func (e *Expr) nextWeekDay(last time.Time, carry bool) (year int, month, day uint8) {
 	// 计算 week day 在当前月份中的日期
 	wday, c := fields[weekIndex].next(uint8(last.Weekday()), e.data[weekIndex], carry)
 	dur := int(wday) - int(last.Weekday()) // 相差的天数

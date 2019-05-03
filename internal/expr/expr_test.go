@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-package cron
+package expr
 
 import (
 	"fmt"
@@ -11,16 +11,6 @@ import (
 
 	"github.com/issue9/assert"
 )
-
-var _ Nexter = &expr{}
-
-func TestCron_NewExpr(t *testing.T) {
-	a := assert.New(t)
-
-	c := New()
-	a.NotError(c.NewExpr("test", nil, "* * * 3-7 * *"))
-	a.Error(c.NewExpr("test", nil, "* * * 3-7a * *"))
-}
 
 func TestExpr_Next(t *testing.T) {
 	a := assert.New(t)
@@ -168,7 +158,7 @@ func TestExpr_Next(t *testing.T) {
 			panic(fmt.Sprintf("%d times 最少两个元素", i))
 		}
 
-		next, err := parseExpr(t.expr)
+		next, err := Parse(t.expr)
 		a.NotError(err).NotNil(next)
 
 		for j := 1; j < len(t.times); j++ {

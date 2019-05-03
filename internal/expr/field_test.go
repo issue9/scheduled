@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-package cron
+package expr
 
 import (
 	"math"
@@ -181,7 +181,7 @@ func TestField_next(t *testing.T) {
 	}
 }
 
-func TestParseExpr(t *testing.T) {
+func TestParse(t *testing.T) {
 	a := assert.New(t)
 
 	type expr struct {
@@ -253,7 +253,7 @@ func TestParseExpr(t *testing.T) {
 	}
 
 	for _, v := range exprs {
-		expr, err := parseExpr(v.expr)
+		expr, err := Parse(v.expr)
 		if v.hasErr {
 			a.Error(err, "测试 %s 时出错", v.expr).
 				Nil(expr)
