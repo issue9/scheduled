@@ -5,6 +5,7 @@
 package expr
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -24,25 +25,68 @@ const (
 	step = 1 << 62
 )
 
-var fields = []field{
-	field{min: 0, max: 59}, // secondIndex
-	field{min: 0, max: 59}, // minuteIndex
-	field{min: 0, max: 23}, // hourIndex
-	field{min: 1, max: 31}, // dayIndex
-	field{min: 1, max: 12}, // monthIndex
-	field{min: 0, max: 6},  // weekIndex
+var bounds = []bound{
+	bound{min: 0, max: 59}, // secondIndex
+	bound{min: 0, max: 59}, // minuteIndex
+	bound{min: 0, max: 23}, // hourIndex
+	bound{min: 1, max: 31}, // dayIndex
+	bound{min: 1, max: 12}, // monthIndex
+	bound{min: 0, max: 6},  // weekIndex
 }
 
-type field struct{ min, max uint8 }
+type bound struct{ min, max uint8 }
 
-func (f field) valid(v uint8) bool {
-	return v >= f.min && v <= f.max
+func (b bound) valid(v uint8) bool {
+	return v >= b.min && v <= b.max
 }
 
-func sortUint64(vals []uint64) {
-	sort.SliceStable(vals, func(i, j int) bool {
-		return vals[i] < vals[j]
-	})
+// Parse 分析 spec 内容，得到 Expr 实例。
+func Parse(spec string) (*Expr, error) {
+	if spec == "" {
+		return nil, errors.New("参数 spec 错误")
+	}
+
+	if spec[0] == '@' {
+		d, found := direct[spec]
+		if !found {
+			return nil, errors.New("未找到指令:" + spec)
+		}
+		spec = d
+	}
+
+	fs := strings.Fields(spec)
+	if len(fs) != indexSize {
+		return nil, errors.New("长度不正确")
+	}
+
+	e := &Expr{
+		title: spec,
+		data:  make([]uint64, indexSize),
+	}
+
+	allAny := true
+	for i, f := range fs {
+		vals, err := parseField(i, f)
+		if err != nil {
+			return nil, err
+		}
+
+		if allAny && vals != any {
+			allAny = false
+		}
+
+		if !allAny && vals == any {
+			vals = step
+		}
+
+		e.data[i] = vals
+	}
+
+	if allAny { // 所有项都为 *
+		return nil, errors.New("所有项都为 *")
+	}
+
+	return e, nil
 }
 
 // 分析单个数字域内容
@@ -52,7 +96,7 @@ func sortUint64(vals []uint64) {
 //  n1-n2
 //  n1,n2
 //  n1-n2,n3-n4,n5
-func parseField(f field, field string) (uint64, error) {
+func parseField(index int, field string) (uint64, error) {
 	if field == "*" {
 		return any, nil
 	}
@@ -60,6 +104,7 @@ func parseField(f field, field string) (uint64, error) {
 	fields := strings.FieldsFunc(field, func(r rune) bool { return r == ',' })
 	list := make([]uint64, 0, len(fields))
 
+	b := bounds[index]
 	for _, v := range fields {
 		if len(v) <= 2 {
 			n, err := strconv.ParseUint(v, 10, 8)
@@ -67,7 +112,7 @@ func parseField(f field, field string) (uint64, error) {
 				return 0, err
 			}
 
-			if !f.valid(uint8(n)) {
+			if !b.valid(uint8(n)) {
 				return 0, fmt.Errorf("值 %d 超出范围", n)
 			}
 
@@ -88,11 +133,11 @@ func parseField(f field, field string) (uint64, error) {
 				return 0, err
 			}
 
-			if !f.valid(uint8(n1)) {
+			if !b.valid(uint8(n1)) {
 				return 0, fmt.Errorf("值 %d 超出范围", n1)
 			}
 
-			if !f.valid(uint8(n2)) {
+			if !b.valid(uint8(n2)) {
 				return 0, fmt.Errorf("值 %d 超出范围", n2)
 			}
 
@@ -122,4 +167,10 @@ func intRange(start, end uint64) []uint64 {
 	}
 
 	return r
+}
+
+func sortUint64(vals []uint64) {
+	sort.SliceStable(vals, func(i, j int) bool {
+		return vals[i] < vals[j]
+	})
 }

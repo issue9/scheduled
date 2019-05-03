@@ -276,7 +276,7 @@ func TestGetMonthWeekDay(t *testing.T) {
 	}
 }
 
-func TestField_next(t *testing.T) {
+func TestBound_next(t *testing.T) {
 	a := assert.New(t)
 
 	type test struct {
@@ -429,8 +429,8 @@ func TestField_next(t *testing.T) {
 	}
 
 	for i, item := range data {
-		f := fields[item.typ]
-		v, c := f.next(item.curr, item.list, item.carry)
+		b := bounds[item.typ]
+		v, c := b.next(item.curr, item.list, item.carry)
 		a.Equal(v, item.v, "data[%d] 错误，实际返回:%d 期望值:%d", i, v, item.v).
 			Equal(c, item.c, "data[%d] 错误，实际返回:%v 期望值:%v", i, c, item.c)
 	}

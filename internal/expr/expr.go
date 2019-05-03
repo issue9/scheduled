@@ -5,11 +5,7 @@
 // Package expr 实现了 cron 表达式的 Nexter 接口
 package expr
 
-import (
-	"errors"
-	"strings"
-	"time"
-)
+import "time"
 
 // 表示 cron 语法表达式中的顺序
 const (
@@ -53,53 +49,4 @@ type Expr struct {
 // Title 获取标题名称
 func (e *Expr) Title() string {
 	return e.title
-}
-
-// Parse 分析 spec 内容，得到 Expr 实例。
-func Parse(spec string) (*Expr, error) {
-	if spec == "" {
-		return nil, errors.New("参数 spec 错误")
-	}
-
-	if spec[0] == '@' {
-		d, found := direct[spec]
-		if !found {
-			return nil, errors.New("未找到指令:" + spec)
-		}
-		spec = d
-	}
-
-	fs := strings.Fields(spec)
-	if len(fs) != indexSize {
-		return nil, errors.New("长度不正确")
-	}
-
-	e := &Expr{
-		title: spec,
-		data:  make([]uint64, indexSize),
-	}
-
-	allAny := true
-	for i, f := range fs {
-		vals, err := parseField(fields[i], f)
-		if err != nil {
-			return nil, err
-		}
-
-		if allAny && vals != any {
-			allAny = false
-		}
-
-		if !allAny && vals == any {
-			vals = step
-		}
-
-		e.data[i] = vals
-	}
-
-	if allAny { // 所有项都为 *
-		return nil, errors.New("所有项都为 *")
-	}
-
-	return e, nil
 }
