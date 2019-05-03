@@ -4,10 +4,7 @@
 
 package cron
 
-import (
-	"strconv"
-	"time"
-)
+import "time"
 
 // 该值的顺序与 cron 中语法的顺序相同
 const (
@@ -22,8 +19,7 @@ const (
 
 // Expr 表达式的分析结果
 type Expr struct {
-	data       []uint64
-	startIndex int
+	data []uint64
 
 	next  time.Time
 	title string
@@ -59,51 +55,13 @@ func (e *Expr) Title() string {
 	return e.title
 }
 
-// 当前的时间是否与 t 相等
-func (e *Expr) equal(t1, t2 time.Time) bool {
-	return true
-	for i := e.startIndex; i < typeSize; i++ {
-		switch i {
-		case secondIndex:
-			if t1.Second() != t2.Second() {
-				return false
-			}
-		case minuteIndex:
-			if t1.Minute() != t2.Minute() {
-				return false
-			}
-		case hourIndex:
-			if t1.Hour() != t2.Hour() {
-				return false
-			}
-		case monthIndex:
-			if t1.Month() != t2.Month() {
-				return false
-			}
-		case dayIndex:
-			if (e.data[dayIndex] != step) && (t1.Day() != t2.Day()) {
-				return false
-			}
-		case weekIndex:
-			if (e.data[weekIndex] != step) && (t1.Weekday() != t2.Weekday()) {
-				return false
-			}
-		default:
-			panic("超出了范围" + strconv.Itoa(e.startIndex))
-		}
-	}
-
-	return true
-}
-
 // Next 计算下个时间点，相对于 last
 func (e *Expr) Next(last time.Time) time.Time {
 	if e.next.After(last) {
 		return e.next
 	}
 
-	carry := e.equal(e.next, last)
-	e.next = e.nextTime(last, carry)
+	e.next = e.nextTime(last, true)
 	return e.next
 }
 
