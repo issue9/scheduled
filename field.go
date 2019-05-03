@@ -115,19 +115,19 @@ func parseExpr(spec string) (*expr, error) {
 	if spec[0] == '@' {
 		d, found := direct[spec]
 		if !found {
-			return nil, errors.New("款找到指令" + spec)
+			return nil, errors.New("未找到指令:" + spec)
 		}
 		spec = d
 	}
 
 	fs := strings.Fields(spec)
-	if len(fs) != typeSize {
+	if len(fs) != indexSize {
 		return nil, errors.New("长度不正确")
 	}
 
 	e := &expr{
 		title: spec,
-		data:  make([]uint64, typeSize),
+		data:  make([]uint64, indexSize),
 	}
 
 	allAny := true

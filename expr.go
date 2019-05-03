@@ -6,7 +6,7 @@ package cron
 
 import "time"
 
-// 该值的顺序与 cron 中语法的顺序相同
+// 表示 cron 语法表达式中的顺序
 const (
 	secondIndex = iota
 	minuteIndex
@@ -14,7 +14,7 @@ const (
 	dayIndex
 	monthIndex
 	weekIndex
-	typeSize
+	indexSize
 )
 
 type expr struct {
@@ -44,7 +44,7 @@ type expr struct {
 //  | ----------- 分
 //  ------------- 秒
 //
-// 星期与日若同时存在，则以或的形式结合。
+// 星期与日若同时存在，则以或的形式组合。
 //
 // 支持以下符号：
 //  - 表示范围

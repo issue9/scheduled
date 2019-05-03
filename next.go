@@ -36,7 +36,6 @@ func (d *duration) Next(last time.Time) time.Time {
 	return last.Add(d.dur)
 }
 
-// Title 标题
 func (d *duration) Title() string {
 	return d.title
 }
