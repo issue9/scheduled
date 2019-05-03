@@ -153,9 +153,13 @@ func (e *Expr) nextWeekDay(last time.Time, carry bool) (year int, month, day uin
 	}
 	day = uint8(dur) + uint8(last.Day()) // wday 在当前月对应的天数
 	year = last.Year()
-	month, _ = fields[monthIndex].next(uint8(last.Month()), e.data[monthIndex], false)
 
-	if days := getMonthDays(time.Month(month), year); day > days { // 跨月份，还有可能跨年份
+	// 此处忽略返回的 c 参数。参数 carry 为 false，则肯定不会返回值为 true 的 carry
+	month, _ = fields[monthIndex].next(uint8(last.Month()), e.data[monthIndex], false)
+	if time.Month(month) != last.Month() {
+		day = getMonthWeekDay(time.Weekday(wday), time.Month(month), year)
+	} else if days := getMonthDays(time.Month(month), year); day > days {
+		// 跨月份，还有可能跨年份
 		month, c = fields[monthIndex].next(uint8(month), e.data[monthIndex], true)
 		if c {
 			year++
@@ -163,6 +167,7 @@ func (e *Expr) nextWeekDay(last time.Time, carry bool) (year int, month, day uin
 		day = getMonthWeekDay(time.Weekday(wday), time.Month(month), year)
 	}
 
+	// 同时设置了 day，需要比较两个值哪个更近
 	if e.data[dayIndex] != any && e.data[dayIndex] != step {
 		y, m, d := e.nextMonthDay(last, carry)
 		if !(year < y || month < m || day < d) {

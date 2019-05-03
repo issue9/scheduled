@@ -158,6 +158,11 @@ func TestParseField(t *testing.T) {
 			field:  "0-4",
 			hasErr: true,
 		},
+		&field{ // 超出范围，月份没有 13
+			typ:    monthIndex,
+			field:  "1-13",
+			hasErr: true,
+		},
 		&field{ // 重复的值
 			typ:    secondIndex,
 			field:  "1-4,9,9-11",
