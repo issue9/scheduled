@@ -53,7 +53,11 @@ func (j *Job) Description() string { return j.n.Title() }
 func (j *Job) State() State { return j.state }
 
 // 运行当前的任务
-func (j *Job) run() {
+func (j *Job) run(now time.Time) {
+	if j.next.IsZero() || j.next.After(now) {
+		return
+	}
+
 	defer func() {
 		if msg := recover(); msg != nil {
 			if err, ok := msg.(error); ok {
