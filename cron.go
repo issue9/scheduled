@@ -55,9 +55,14 @@ func (c *Cron) Serve() error {
 					}
 					go c.jobs[0].run(n)
 				}
-			}
+			} // end select
 		}
 	}
+}
+
+// Stop 停止当前服务
+func (c *Cron) Stop() {
+	c.stop <- struct{}{}
 }
 
 func sortJobs(jobs []*Job) {
