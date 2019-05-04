@@ -25,7 +25,7 @@ func New() *Cron {
 }
 
 // Serve 运行服务
-func (c *Cron) Serve() error {
+func (c *Cron) Serve() {
 	now := time.Now()
 	for _, job := range c.jobs {
 		job.init(now)
@@ -43,7 +43,7 @@ func (c *Cron) Serve() error {
 			select {
 			case <-c.stop:
 				timer.Stop()
-				return nil
+				return
 			case n := <-timer.C:
 				go c.jobs[0].run(n)
 			}
