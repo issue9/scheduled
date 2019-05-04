@@ -46,8 +46,8 @@ func (c *Cron) New(name string, f JobFunc, n Nexter) {
 // Name 任务的名称
 func (j *Job) Name() string { return j.name }
 
-//
-func (j *Job) Description() string { return j.n.Title() }
+// Next 该任务关联的 Nexter 接口
+func (j *Job) Next() Nexter { return j.n }
 
 // State 获取当前的状态
 func (j *Job) State() State { return j.state }
