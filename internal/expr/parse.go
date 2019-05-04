@@ -43,7 +43,7 @@ func (b bound) valid(v uint8) bool {
 // Parse 分析 spec 内容，得到 Expr 实例。
 func Parse(spec string) (*Expr, error) {
 	if spec == "" {
-		return nil, errors.New("参数 spec 错误")
+		return nil, errors.New("参数 spec 不能为空")
 	}
 
 	if spec[0] == '@' {
@@ -64,7 +64,7 @@ func Parse(spec string) (*Expr, error) {
 		data:  make([]uint64, indexSize),
 	}
 
-	allAny := true
+	allAny := true // 是否所有字段都是 any
 	for i, f := range fs {
 		vals, err := parseField(i, f)
 		if err != nil {
@@ -106,7 +106,7 @@ func parseField(index int, field string) (uint64, error) {
 
 	b := bounds[index]
 	for _, v := range fields {
-		if len(v) <= 2 {
+		if len(v) <= 2 { // 少于 3 个字符，说明不可能有特殊字符。
 			n, err := strconv.ParseUint(v, 10, 8)
 			if err != nil {
 				return 0, err
@@ -122,13 +122,11 @@ func parseField(index int, field string) (uint64, error) {
 
 		index := strings.IndexByte(v, '-')
 		if index >= 0 {
-			v1 := v[:index]
-			v2 := v[index+1:]
-			n1, err := strconv.ParseUint(v1, 10, 8)
+			n1, err := strconv.ParseUint(v[:index], 10, 8)
 			if err != nil {
 				return 0, err
 			}
-			n2, err := strconv.ParseUint(v2, 10, 8)
+			n2, err := strconv.ParseUint(v[index+1:], 10, 8)
 			if err != nil {
 				return 0, err
 			}

@@ -107,11 +107,16 @@ func getMonthWeekDay(weekday time.Weekday, month time.Month, year int) uint8 {
 	return uint8(last.Day())
 }
 
+// 从 list 中获取与 curr 最近的下一个值。
+//
+// 如果 carry 为 false，且 curr 存在于 list
+// 则有可能返回 curr 本身。
+//
 // curr 当前的时间值；
 // list 可用的时间值；
 // carry 前一个数值是否已经进位；
 // val 返回计算后的最近一个时间值；
-// c 是否需要一个值进位。
+// c 是否需要下一个值进位。
 func (b bound) next(curr uint8, list uint64, carry bool) (val uint8, c bool) {
 	if list == any {
 		return curr, carry
