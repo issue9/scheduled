@@ -49,7 +49,12 @@ func (c *Cron) Serve() error {
 				timer.Stop()
 				return nil
 			case n := <-timer.C:
-				go c.jobs[0].run(n)
+				for _, j := range c.jobs {
+					if j.next.IsZero() || j.next.After(now) {
+						break
+					}
+					go c.jobs[0].run(n)
+				}
 			}
 		}
 	}
