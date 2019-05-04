@@ -6,9 +6,13 @@
 package cron
 
 import (
+	"errors"
 	"sort"
 	"time"
 )
+
+// ErrNoJobs 没有添加任务定时任务
+var ErrNoJobs = errors.New("任务列表为空")
 
 // Cron 管理所有的定时任务
 type Cron struct {
@@ -25,7 +29,11 @@ func New() *Cron {
 }
 
 // Serve 运行服务
-func (c *Cron) Serve() {
+func (c *Cron) Serve() error {
+	if len(c.jobs) == 0 {
+		return ErrNoJobs
+	}
+
 	now := time.Now()
 	for _, job := range c.jobs {
 		job.init(now)
@@ -34,16 +42,12 @@ func (c *Cron) Serve() {
 	for {
 		sortJobs(c.jobs)
 
-		if len(c.jobs) == 0 {
-			time.Sleep(24 * time.Hour) // 没有内容
-		}
-
 		timer := time.NewTicker(c.jobs[0].next.Sub(now))
 		for {
 			select {
 			case <-c.stop:
 				timer.Stop()
-				return
+				return nil
 			case n := <-timer.C:
 				go c.jobs[0].run(n)
 			}
