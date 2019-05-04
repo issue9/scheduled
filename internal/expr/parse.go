@@ -113,7 +113,7 @@ func parseField(index int, field string) (uint64, error) {
 			}
 
 			if !b.valid(uint8(n)) {
-				return 0, fmt.Errorf("值 %d 超出范围", n)
+				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n, b.min, b.max)
 			}
 
 			list = append(list, n)
@@ -134,11 +134,11 @@ func parseField(index int, field string) (uint64, error) {
 			}
 
 			if !b.valid(uint8(n1)) {
-				return 0, fmt.Errorf("值 %d 超出范围", n1)
+				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n1, b.min, b.max)
 			}
 
 			if !b.valid(uint8(n2)) {
-				return 0, fmt.Errorf("值 %d 超出范围", n2)
+				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n2, b.min, b.max)
 			}
 
 			list = append(list, intRange(n1, n2)...)
