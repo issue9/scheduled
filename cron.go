@@ -5,20 +5,7 @@
 // Package cron 定时任务
 package cron
 
-import (
-	"context"
-	"time"
-)
-
-// 表示任务状态
-const (
-	Stoped State = iota
-	Running
-	Failed
-)
-
-// State 状态值类型
-type State int8
+import "context"
 
 // Cron 管理所有的定时任务
 type Cron struct {
@@ -26,33 +13,11 @@ type Cron struct {
 	channels chan *Job
 }
 
-// JobFunc 每一个定时任务实际上执行的函数签名
-type JobFunc func() error
-
-// Job 一个定时任务的基本接口
-type Job struct {
-	name  string
-	f     JobFunc
-	last  time.Time
-	state State
-	next  Nexter
-}
-
 // New 声明 Cron 对象实例
 func New() *Cron {
 	return &Cron{
 		jobs: make([]*Job, 0, 100),
 	}
-}
-
-// New 添加一个新的定时任务
-func (c *Cron) New(name string, f JobFunc, n Nexter) {
-	c.jobs = append(c.jobs, &Job{
-		name:  name,
-		f:     f,
-		next:  n,
-		state: Stoped,
-	})
 }
 
 // Serve 运行服务
