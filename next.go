@@ -22,8 +22,8 @@ type Nexter interface {
 }
 
 // NewTicker 添加一个新的定时任务
-func (c *Cron) NewTicker(name string, f JobFunc, dur time.Duration) {
-	c.New(name, f, ticker.New(dur))
+func (c *Cron) NewTicker(name string, f JobFunc, dur time.Duration) error {
+	return c.New(name, f, ticker.New(dur))
 }
 
 // NewExpr 使用 cron 表示式新建一个定时任务
@@ -58,6 +58,5 @@ func (c *Cron) NewExpr(name string, f JobFunc, spec string) error {
 		return err
 	}
 
-	c.New(name, f, next)
-	return nil
+	return c.New(name, f, next)
 }

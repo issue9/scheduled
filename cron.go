@@ -11,13 +11,17 @@ import (
 	"time"
 )
 
-// ErrNoJobs 没有添加任务定时任务
-var ErrNoJobs = errors.New("任务列表为空")
+// 一些错误的定义
+var (
+	ErrNoJobs  = errors.New("任务列表为空")
+	ErrRunning = errors.New("任务已经在运行")
+)
 
 // Cron 管理所有的定时任务
 type Cron struct {
-	jobs []*Job
-	stop chan struct{}
+	jobs    []*Job
+	stop    chan struct{}
+	running bool
 }
 
 // New 声明 Cron 对象实例
@@ -30,6 +34,12 @@ func New() *Cron {
 
 // Serve 运行服务
 func (c *Cron) Serve() error {
+	if c.running {
+		return ErrRunning
+	}
+
+	c.running = true
+
 	if len(c.jobs) == 0 {
 		return ErrNoJobs
 	}
@@ -62,6 +72,10 @@ func (c *Cron) Serve() error {
 
 // Stop 停止当前服务
 func (c *Cron) Stop() {
+	if !c.running {
+		return
+	}
+
 	c.stop <- struct{}{}
 }
 

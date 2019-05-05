@@ -34,13 +34,18 @@ type Job struct {
 }
 
 // New 添加一个新的定时任务
-func (c *Cron) New(name string, f JobFunc, n Nexter) {
+func (c *Cron) New(name string, f JobFunc, n Nexter) error {
+	if c.running {
+		return ErrRunning
+	}
+
 	c.jobs = append(c.jobs, &Job{
 		name:  name,
 		f:     f,
 		n:     n,
 		state: Stoped,
 	})
+	return nil
 }
 
 // Name 任务的名称
