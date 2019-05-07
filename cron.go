@@ -7,6 +7,7 @@ package cron
 
 import (
 	"errors"
+	"log"
 	"sort"
 	"time"
 )
@@ -33,7 +34,9 @@ func New() *Cron {
 }
 
 // Serve 运行服务
-func (c *Cron) Serve() error {
+//
+// errlog 定时任务的错误信息在此通道输出，若为空，则不输出。
+func (c *Cron) Serve(errlog *log.Logger) error {
 	if c.running {
 		return ErrRunning
 	}
@@ -63,7 +66,7 @@ func (c *Cron) Serve() error {
 					if j.next.IsZero() || j.next.After(n) {
 						break
 					}
-					go c.jobs[0].run(n)
+					go j.run(n, errlog)
 				}
 			} // end select
 		}

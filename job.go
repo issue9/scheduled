@@ -6,6 +6,7 @@ package cron
 
 import (
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -57,8 +58,13 @@ func (j *Job) Next() Nexter { return j.n }
 // State 获取当前的状态
 func (j *Job) State() State { return j.state }
 
+// Err 返回当前的错误信息
+func (j *Job) Err() error { return j.err }
+
 // 运行当前的任务
-func (j *Job) run(now time.Time) {
+//
+// errlog 在出错时，日志的输出通道，可以为空，表示不输出。
+func (j *Job) run(now time.Time, errlog *log.Logger) {
 	defer func() {
 		if msg := recover(); msg != nil {
 			if err, ok := msg.(error); ok {
@@ -68,6 +74,10 @@ func (j *Job) run(now time.Time) {
 			}
 
 			j.state = Failed
+		}
+
+		if errlog != nil && j.err != nil {
+			errlog.Println(j.err)
 		}
 	}()
 
