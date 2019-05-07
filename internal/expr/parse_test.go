@@ -173,6 +173,11 @@ func TestParseField(t *testing.T) {
 			field:  "0-7",
 			hasErr: true,
 		},
+		&field{ // 超出范围
+			typ:    weekIndex,
+			field:  "0-8",
+			hasErr: true,
+		},
 		&field{
 			typ:   weekIndex,
 			field: "5-7",
