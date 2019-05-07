@@ -13,8 +13,9 @@ import (
 
 // Nexter 用于指定定时任务中下个执行时间。
 type Nexter interface {
-	// 生成下一次定时器需要的时间。
-	// 相对于 last 时间。
+	// 生成下一次定时器需要的时间。相对于 last 时间。
+	//
+	// 如果不需要再执行了，则应该返回一个零值。
 	Next(last time.Time) time.Time
 
 	// Title 返回当前 Nexter 的一个名称。

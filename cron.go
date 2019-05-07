@@ -85,10 +85,10 @@ func (c *Cron) Stop() {
 func sortJobs(jobs []*Job) {
 	sort.SliceStable(jobs, func(i, j int) bool {
 		if jobs[i].next.IsZero() {
-			return true
+			return false
 		}
 		if jobs[j].next.IsZero() {
-			return false
+			return true
 		}
 		return jobs[i].next.Before(jobs[j].next)
 	})
