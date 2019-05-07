@@ -71,7 +71,7 @@ func TestParse(t *testing.T) {
 			vals:   nil,
 		},
 		&expr{ // 值超出范围
-			expr:   "* * * * * 7",
+			expr:   "* * * * * 8",
 			hasErr: true,
 			vals:   nil,
 		},
@@ -161,6 +161,24 @@ func TestParseField(t *testing.T) {
 			field: "31",
 			vals:  pow2(31),
 		},
+
+		// week 相关的测试
+		&field{
+			typ:   weekIndex,
+			field: "7",
+			vals:  pow2(0),
+		},
+		&field{ // 0 与 7 是相同的值
+			typ:    weekIndex,
+			field:  "0-7",
+			hasErr: true,
+		},
+		&field{
+			typ:   weekIndex,
+			field: "5-7",
+			vals:  pow2(0, 5, 6),
+		},
+
 		&field{
 			typ:   secondIndex,
 			field: "1-4,9,19-21",
@@ -226,4 +244,3 @@ func TestParseField(t *testing.T) {
 		a.Equal(val, v.vals, "测试 %s 时出错 实际返回:%d，期望值：%d", v.field, val, v.vals)
 	}
 }
-

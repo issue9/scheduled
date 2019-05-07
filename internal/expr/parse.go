@@ -31,7 +31,7 @@ var bounds = []bound{
 	bound{min: 0, max: 23}, // hourIndex
 	bound{min: 1, max: 31}, // dayIndex
 	bound{min: 1, max: 12}, // monthIndex
-	bound{min: 0, max: 6},  // weekIndex
+	bound{min: 0, max: 7},  // weekIndex
 }
 
 type bound struct{ min, max uint8 }
@@ -96,7 +96,7 @@ func Parse(spec string) (*Expr, error) {
 //  n1-n2
 //  n1,n2
 //  n1-n2,n3-n4,n5
-func parseField(index int, field string) (uint64, error) {
+func parseField(typ int, field string) (uint64, error) {
 	if field == "*" {
 		return any, nil
 	}
@@ -104,7 +104,7 @@ func parseField(index int, field string) (uint64, error) {
 	fields := strings.FieldsFunc(field, func(r rune) bool { return r == ',' })
 	list := make([]uint64, 0, len(fields))
 
-	b := bounds[index]
+	b := bounds[typ]
 	for _, v := range fields {
 		if len(v) <= 2 { // 少于 3 个字符，说明不可能有特殊字符。
 			n, err := strconv.ParseUint(v, 10, 8)
@@ -114,6 +114,11 @@ func parseField(index int, field string) (uint64, error) {
 
 			if !b.valid(uint8(n)) {
 				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n, b.min, b.max)
+			}
+
+			// 星期中的 7 替换成 0
+			if typ == weekIndex && n == uint64(b.max) {
+				n = uint64(b.min)
 			}
 
 			list = append(list, n)
@@ -140,7 +145,11 @@ func parseField(index int, field string) (uint64, error) {
 			}
 
 			for i := n1; i <= n2; i++ {
-				list = append(list, i)
+				if typ == weekIndex && i == uint64(b.max) {
+					list = append(list, uint64(b.min))
+				} else {
+					list = append(list, i)
+				}
 			}
 		}
 	}
