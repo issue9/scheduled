@@ -139,7 +139,9 @@ func parseField(index int, field string) (uint64, error) {
 				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n2, b.min, b.max)
 			}
 
-			list = append(list, intRange(n1, n2)...)
+			for i := n1; i <= n2; i++ {
+				list = append(list, i)
+			}
 		}
 	}
 
@@ -155,16 +157,6 @@ func parseField(index int, field string) (uint64, error) {
 		ret |= (1 << v)
 	}
 	return ret, nil
-}
-
-// 获取一个范围内的整数
-func intRange(start, end uint64) []uint64 {
-	r := make([]uint64, 0, end-start+1)
-	for i := start; i <= end; i++ {
-		r = append(r, i)
-	}
-
-	return r
 }
 
 func sortUint64(vals []uint64) {

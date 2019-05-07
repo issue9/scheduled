@@ -227,9 +227,3 @@ func TestParseField(t *testing.T) {
 	}
 }
 
-func TestIntRange(t *testing.T) {
-	a := assert.New(t)
-
-	a.Equal(intRange(1, 5), []uint8{1, 2, 3, 4, 5})
-	a.Equal(intRange(1, 1), []uint8{1})
-}
