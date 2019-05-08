@@ -59,21 +59,24 @@ func (s *Server) Serve(errlog *log.Logger) error {
 			return ErrNoJobs
 		}
 
-		timer := time.NewTimer(s.jobs[0].next.Sub(time.Now()))
-		for {
-			select {
-			case <-s.stop:
-				timer.Stop()
-				return nil
-			case n := <-timer.C:
-				for _, j := range s.jobs {
-					if j.next.IsZero() || j.next.After(n) {
-						break
-					}
-					go j.run(n, errlog)
-				}
-			} // end select
+		dur := s.jobs[0].next.Sub(time.Now())
+		if dur < 0 {
+			dur = 0
 		}
+		timer := time.NewTimer(dur)
+
+		select {
+		case <-s.stop:
+			timer.Stop()
+			return nil
+		case n := <-timer.C:
+			for _, j := range s.jobs {
+				if j.next.IsZero() || j.next.After(n) {
+					break
+				}
+				go j.run(n, errlog)
+			}
+		} // end select
 	}
 }
 
