@@ -55,6 +55,10 @@ func (c *Cron) Serve(errlog *log.Logger) error {
 	for {
 		sortJobs(c.jobs)
 
+		if c.jobs[0].next.IsZero() { // 没有需要运行的任务
+			time.Sleep(24 * time.Hour)
+		}
+
 		timer := time.NewTicker(c.jobs[0].next.Sub(now))
 		for {
 			select {
