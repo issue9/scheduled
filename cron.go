@@ -86,6 +86,7 @@ func (s *Server) Stop() {
 		return
 	}
 
+	s.running = false
 	s.stop <- struct{}{}
 }
 
