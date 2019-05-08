@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-// Package expr 实现了 cron 表达式的 Scheduler 接口
-package expr
+// Package cron 实现了 cron 表达式的 Scheduler 接口
+package cron
 
 import "time"
 
@@ -30,7 +30,7 @@ var direct = map[string]string{
 	"@hourly":   "0 0 * * * *",
 }
 
-type expr struct {
+type cron struct {
 	// 依次保存着 cron 语法中各个字段解析后的内容。
 	//
 	// 最长的秒数，最多 60 位，正好可以使用一个 uint64 保存，
@@ -46,6 +46,6 @@ type expr struct {
 }
 
 // Title 获取标题名称
-func (e *expr) Title() string {
-	return e.title
+func (c *cron) Title() string {
+	return c.title
 }

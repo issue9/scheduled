@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-// Package cron 定时任务
-package cron
+// Package scheduled 定时任务
+package scheduled
 
 import (
 	"errors"
@@ -18,16 +18,16 @@ var (
 	ErrRunning = errors.New("任务已经在运行")
 )
 
-// Cron 管理所有的定时任务
-type Cron struct {
+// Server 管理所有的定时任务
+type Server struct {
 	jobs    []*Job
 	stop    chan struct{}
 	running bool
 }
 
-// New 声明 Cron 对象实例
-func New() *Cron {
-	return &Cron{
+// NewServer 声明 Server 对象实例
+func NewServer() *Server {
+	return &Server{
 		jobs: make([]*Job, 0, 100),
 		stop: make(chan struct{}, 1),
 	}
@@ -36,37 +36,37 @@ func New() *Cron {
 // Serve 运行服务
 //
 // errlog 定时任务的错误信息在此通道输出，若为空，则不输出。
-func (c *Cron) Serve(errlog *log.Logger) error {
-	if c.running {
+func (s *Server) Serve(errlog *log.Logger) error {
+	if s.running {
 		return ErrRunning
 	}
 
-	c.running = true
+	s.running = true
 
-	if len(c.jobs) == 0 {
+	if len(s.jobs) == 0 {
 		return ErrNoJobs
 	}
 
 	now := time.Now()
-	for _, job := range c.jobs {
+	for _, job := range s.jobs {
 		job.init(now)
 	}
 
 	for {
-		sortJobs(c.jobs)
+		sortJobs(s.jobs)
 
-		if c.jobs[0].next.IsZero() { // 没有需要运行的任务
+		if s.jobs[0].next.IsZero() { // 没有需要运行的任务
 			time.Sleep(24 * time.Hour)
 		}
 
-		timer := time.NewTicker(c.jobs[0].next.Sub(now))
+		timer := time.NewTicker(s.jobs[0].next.Sub(now))
 		for {
 			select {
-			case <-c.stop:
+			case <-s.stop:
 				timer.Stop()
 				return nil
 			case n := <-timer.C:
-				for _, j := range c.jobs {
+				for _, j := range s.jobs {
 					if j.next.IsZero() || j.next.After(n) {
 						break
 					}
@@ -78,12 +78,12 @@ func (c *Cron) Serve(errlog *log.Logger) error {
 }
 
 // Stop 停止当前服务
-func (c *Cron) Stop() {
-	if !c.running {
+func (s *Server) Stop() {
+	if !s.running {
 		return
 	}
 
-	c.stop <- struct{}{}
+	s.stop <- struct{}{}
 }
 
 func sortJobs(jobs []*Job) {

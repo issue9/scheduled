@@ -2,10 +2,8 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-package expr
+package cron
 
-import (
-	"github.com/issue9/cron/schedule"
-)
+import "github.com/issue9/scheduled/schedulers"
 
-var _ schedule.Scheduler = &expr{}
+var _ schedulers.Scheduler = &cron{}

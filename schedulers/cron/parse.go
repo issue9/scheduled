@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-package expr
+package cron
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/issue9/cron/schedule"
+	"github.com/issue9/scheduled/schedulers"
 )
 
 const (
@@ -43,7 +43,7 @@ func (b bound) valid(v uint8) bool {
 }
 
 // Parse 分析 spec 内容，得到 schedule.Scheduler 实例。
-func Parse(spec string) (schedule.Scheduler, error) {
+func Parse(spec string) (schedulers.Scheduler, error) {
 	if spec == "" {
 		return nil, errors.New("参数 spec 不能为空")
 	}
@@ -61,7 +61,7 @@ func Parse(spec string) (schedule.Scheduler, error) {
 		return nil, errors.New("长度不正确")
 	}
 
-	e := &expr{
+	c := &cron{
 		title: spec,
 		data:  make([]uint64, indexSize),
 	}
@@ -81,14 +81,14 @@ func Parse(spec string) (schedule.Scheduler, error) {
 			vals = step
 		}
 
-		e.data[i] = vals
+		c.data[i] = vals
 	}
 
 	if allAny { // 所有项都为 *
 		return nil, errors.New("所有项都为 *")
 	}
 
-	return e, nil
+	return c, nil
 }
 
 // 分析单个数字域内容

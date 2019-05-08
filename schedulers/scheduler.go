@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-// Package schedule 实现了时间部分时间调度的算法。
-package schedule
+// Package schedulers 实现了部分时间调度的算法。
+package schedulers
 
 import "time"
 

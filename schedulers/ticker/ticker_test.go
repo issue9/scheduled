@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/issue9/assert"
-	"github.com/issue9/cron/schedule"
+	"github.com/issue9/scheduled/schedulers"
 )
 
-var _ schedule.Scheduler = &ticker{}
+var _ schedulers.Scheduler = &ticker{}
 
 func TestTicker(t *testing.T) {
 	a := assert.New(t)

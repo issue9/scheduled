@@ -2,16 +2,16 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-package cron
+package scheduled
 
 import (
 	"fmt"
 	"log"
 	"time"
 
-	"github.com/issue9/cron/schedule"
-	"github.com/issue9/cron/schedule/expr"
-	"github.com/issue9/cron/schedule/ticker"
+	"github.com/issue9/scheduled/schedulers"
+	"github.com/issue9/scheduled/schedulers/cron"
+	"github.com/issue9/scheduled/schedulers/ticker"
 )
 
 // 表示任务状态
@@ -31,7 +31,7 @@ type JobFunc func() error
 type Job struct {
 	name      string
 	f         JobFunc
-	scheduler schedule.Scheduler
+	scheduler schedulers.Scheduler
 	state     State
 	err       error // 出错时的错误内容
 
@@ -39,15 +39,15 @@ type Job struct {
 }
 
 // New 添加一个新的定时任务
-func (c *Cron) New(name string, f JobFunc, s schedule.Scheduler) error {
-	if c.running {
+func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler) error {
+	if s.running {
 		return ErrRunning
 	}
 
-	c.jobs = append(c.jobs, &Job{
+	s.jobs = append(s.jobs, &Job{
 		name:      name,
 		f:         f,
-		scheduler: s,
+		scheduler: scheduler,
 		state:     Stoped,
 	})
 	return nil
@@ -57,7 +57,7 @@ func (c *Cron) New(name string, f JobFunc, s schedule.Scheduler) error {
 func (j *Job) Name() string { return j.name }
 
 // Next 该任务关联的 Nexter 接口
-func (j *Job) Next() schedule.Scheduler { return j.scheduler }
+func (j *Job) Next() schedulers.Scheduler { return j.scheduler }
 
 // State 获取当前的状态
 func (j *Job) State() State { return j.state }
@@ -105,11 +105,11 @@ func (j *Job) init(now time.Time) {
 }
 
 // NewTicker 添加一个新的定时任务
-func (c *Cron) NewTicker(name string, f JobFunc, dur time.Duration) error {
-	return c.New(name, f, ticker.New(dur))
+func (s *Server) NewTicker(name string, f JobFunc, dur time.Duration) error {
+	return s.New(name, f, ticker.New(dur))
 }
 
-// NewExpr 使用 cron 表示式新建一个定时任务
+// NewCron 使用 cron 表示式新建一个定时任务
 //
 // spec 的值可以是：
 //  * * * * * *
@@ -135,11 +135,11 @@ func (c *Cron) NewTicker(name string, f JobFunc, dur time.Duration) error {
 //  @daily:    0 0 0 * * *
 //  @midnight: 0 0 0 * * *
 //  @hourly:   0 0 * * * *
-func (c *Cron) NewExpr(name string, f JobFunc, spec string) error {
-	next, err := expr.Parse(spec)
+func (s *Server) NewCron(name string, f JobFunc, spec string) error {
+	scheduler, err := cron.Parse(spec)
 	if err != nil {
 		return err
 	}
 
-	return c.New(name, f, next)
+	return s.New(name, f, scheduler)
 }

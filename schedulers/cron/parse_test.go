@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-package expr
+package cron
 
 import (
 	"math"
@@ -100,10 +100,10 @@ func TestParse(t *testing.T) {
 			continue
 		}
 
-		expr, ok := s.(*expr)
-		a.True(ok).NotNil(expr)
+		c, ok := s.(*cron)
+		a.True(ok).NotNil(c)
 		a.NotError(err, "测试 %s 时出错 %s", v.expr, err)
-		a.Equal(expr.data, v.vals, "测试 %s 时出错，期望值：%v，实际返回值：%v", v.expr, v.vals, expr.data)
+		a.Equal(c.data, v.vals, "测试 %s 时出错，期望值：%v，实际返回值：%v", v.expr, v.vals, c.data)
 	}
 }
 

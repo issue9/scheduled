@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/issue9/cron/schedule"
+	"github.com/issue9/scheduled/schedulers"
 )
 
 type ticker struct {
@@ -18,7 +18,7 @@ type ticker struct {
 }
 
 // New 声明一个固定时间段的定时任务
-func New(d time.Duration) schedule.Scheduler {
+func New(d time.Duration) schedulers.Scheduler {
 	return &ticker{
 		dur:   d,
 		title: fmt.Sprintf("每隔 %s", d),

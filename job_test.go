@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-package cron
+package scheduled
 
 import (
 	"testing"
@@ -10,10 +10,10 @@ import (
 	"github.com/issue9/assert"
 )
 
-func TestCron_NewExpr(t *testing.T) {
+func TestServer_NewExpr(t *testing.T) {
 	a := assert.New(t)
 
-	c := New()
-	a.NotError(c.NewExpr("test", nil, "* * * 3-7 * *"))
-	a.Error(c.NewExpr("test", nil, "* * * 3-7a * *"))
+	srv := NewServer()
+	a.NotError(srv.NewCron("test", nil, "* * * 3-7 * *"))
+	a.Error(srv.NewCron("test", nil, "* * * 3-7a * *"))
 }
