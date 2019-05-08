@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-// Package expr 实现了 cron 表达式的 Nexter 接口
+// Package expr 实现了 cron 表达式的 Scheduler 接口
 package expr
 
 import "time"
