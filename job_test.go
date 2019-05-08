@@ -5,12 +5,78 @@
 package scheduled
 
 import (
+	"errors"
+	"io/ioutil"
+	"log"
 	"testing"
+	"time"
 
 	"github.com/issue9/assert"
+
+	"github.com/issue9/scheduled/schedulers/ticker"
 )
 
-func TestServer_NewExpr(t *testing.T) {
+var (
+	succFunc = func() error {
+		println("succ")
+		return nil
+	}
+
+	erroFunc = func() error {
+		println("erro")
+		return errors.New("erro")
+	}
+
+	failFunc = func() error {
+		println("fail")
+		panic("fail")
+	}
+
+	errlog = log.New(ioutil.Discard, "ERRO", 0)
+)
+
+func TestJob_run(t *testing.T) {
+	a := assert.New(t)
+	now := time.Now()
+
+	j := &Job{
+		name:      "succ",
+		f:         succFunc,
+		scheduler: ticker.New(time.Second),
+	}
+	j.init(now)
+	j.run(now, nil)
+	a.Nil(j.Err()).
+		Equal(j.State(), Stoped).
+		True(j.next.After(now)).
+		True(j.next.After(j.prev))
+
+	j = &Job{
+		name:      "erro",
+		f:         erroFunc,
+		scheduler: ticker.New(time.Second),
+	}
+	j.init(now)
+	j.run(now, errlog)
+	a.NotNil(j.Err()).
+		Equal(j.State(), Failed).
+		True(j.next.After(now)).
+		True(j.next.After(j.prev))
+
+	j = &Job{
+		name:      "fail",
+		f:         failFunc,
+		scheduler: ticker.New(time.Second),
+	}
+	j.init(now)
+	j.run(now, nil)
+	a.NotNil(j.Err()).
+		Equal(j.State(), Failed).
+		True(j.next.After(now)).
+		True(j.next.After(j.prev))
+}
+
+func TestServer_NewCron(t *testing.T) {
 	a := assert.New(t)
 
 	srv := NewServer()

@@ -22,8 +22,8 @@ expr := func() error {
 }
 
 srv.NewTicker(ticker, 1*time.Minute)
-srv.NewExpr(expr, "@daily")
-srv.NewExpr(expr, "* * 1 * * *")
+srv.NewCron(expr, "@daily")
+srv.NewCron(expr, "* * 1 * * *")
 
 log.Panic(srv.Serve())
 ```

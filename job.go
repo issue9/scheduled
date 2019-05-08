@@ -48,7 +48,6 @@ func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler) err
 		name:      name,
 		f:         f,
 		scheduler: scheduler,
-		state:     Stoped,
 	})
 	return nil
 }
@@ -74,7 +73,7 @@ func (j *Job) run(now time.Time, errlog *log.Logger) {
 			if err, ok := msg.(error); ok {
 				j.err = err
 			} else {
-				j.err = fmt.Errorf("job error: %v", msg)
+				j.err = fmt.Errorf("job %s error: %v", j.name, msg)
 			}
 
 			j.state = Failed
