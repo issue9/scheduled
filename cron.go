@@ -56,10 +56,10 @@ func (s *Server) Serve(errlog *log.Logger) error {
 		sortJobs(s.jobs)
 
 		if s.jobs[0].next.IsZero() { // 没有需要运行的任务
-			time.Sleep(24 * time.Hour)
+			return ErrNoJobs
 		}
 
-		timer := time.NewTicker(s.jobs[0].next.Sub(now))
+		timer := time.NewTimer(s.jobs[0].next.Sub(time.Now()))
 		for {
 			select {
 			case <-s.stop:
