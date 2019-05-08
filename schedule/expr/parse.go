@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/issue9/cron/schedule"
 )
 
 const (
@@ -40,8 +42,8 @@ func (b bound) valid(v uint8) bool {
 	return v >= b.min && v <= b.max
 }
 
-// Parse 分析 spec 内容，得到 Expr 实例。
-func Parse(spec string) (*Expr, error) {
+// Parse 分析 spec 内容，得到 schedule.Scheduler 实例。
+func Parse(spec string) (schedule.Scheduler, error) {
 	if spec == "" {
 		return nil, errors.New("参数 spec 不能为空")
 	}
@@ -59,7 +61,7 @@ func Parse(spec string) (*Expr, error) {
 		return nil, errors.New("长度不正确")
 	}
 
-	e := &Expr{
+	e := &expr{
 		title: spec,
 		data:  make([]uint64, indexSize),
 	}

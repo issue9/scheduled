@@ -6,8 +6,7 @@ package expr
 
 import "time"
 
-// Next 计算下个时间点，相对于 last
-func (e *Expr) Next(last time.Time) time.Time {
+func (e *expr) Next(last time.Time) time.Time {
 	if e.next.After(last) {
 		return e.next
 	}
@@ -16,7 +15,7 @@ func (e *Expr) Next(last time.Time) time.Time {
 	return e.next
 }
 
-func (e *Expr) nextTime(last time.Time, carry bool) time.Time {
+func (e *expr) nextTime(last time.Time, carry bool) time.Time {
 	second, carry := bounds[secondIndex].next(uint8(last.Second()), e.data[secondIndex], carry)
 	minute, carry := bounds[minuteIndex].next(uint8(last.Minute()), e.data[minuteIndex], carry)
 	hour, carry := bounds[hourIndex].next(uint8(last.Hour()), e.data[hourIndex], carry)
@@ -32,7 +31,7 @@ func (e *Expr) nextTime(last time.Time, carry bool) time.Time {
 	return time.Date(year, time.Month(month), int(day), int(hour), int(minute), int(second), 0, last.Location())
 }
 
-func (e *Expr) nextMonthDay(last time.Time, carry bool) (year int, month, day uint8) {
+func (e *expr) nextMonthDay(last time.Time, carry bool) (year int, month, day uint8) {
 	day, carry = bounds[dayIndex].next(uint8(last.Day()), e.data[dayIndex], carry)
 	month, carry = bounds[monthIndex].next(uint8(last.Month()), e.data[monthIndex], carry)
 	year = last.Year()
@@ -53,7 +52,7 @@ func (e *Expr) nextMonthDay(last time.Time, carry bool) (year int, month, day ui
 	}
 }
 
-func (e *Expr) nextWeekDay(last time.Time, carry bool) (year int, month, day uint8) {
+func (e *expr) nextWeekDay(last time.Time, carry bool) (year int, month, day uint8) {
 	// 计算 week day 在当前月份中的日期
 	wday, c := bounds[weekIndex].next(uint8(last.Weekday()), e.data[weekIndex], carry)
 	dur := int(wday) - int(last.Weekday()) // 相差的天数

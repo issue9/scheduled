@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/issue9/cron/schedule"
 )
 
 // 表示任务状态
@@ -25,26 +27,26 @@ type JobFunc func() error
 
 // Job 一个定时任务的基本接口
 type Job struct {
-	name  string
-	f     JobFunc
-	n     Nexter
-	state State
-	err   error // 出错时的错误内容
+	name      string
+	f         JobFunc
+	scheduler schedule.Scheduler
+	state     State
+	err       error // 出错时的错误内容
 
 	prev, next time.Time
 }
 
 // New 添加一个新的定时任务
-func (c *Cron) New(name string, f JobFunc, n Nexter) error {
+func (c *Cron) New(name string, f JobFunc, s schedule.Scheduler) error {
 	if c.running {
 		return ErrRunning
 	}
 
 	c.jobs = append(c.jobs, &Job{
-		name:  name,
-		f:     f,
-		n:     n,
-		state: Stoped,
+		name:      name,
+		f:         f,
+		scheduler: s,
+		state:     Stoped,
 	})
 	return nil
 }
@@ -53,7 +55,7 @@ func (c *Cron) New(name string, f JobFunc, n Nexter) error {
 func (j *Job) Name() string { return j.name }
 
 // Next 该任务关联的 Nexter 接口
-func (j *Job) Next() Nexter { return j.n }
+func (j *Job) Next() schedule.Scheduler { return j.scheduler }
 
 // State 获取当前的状态
 func (j *Job) State() State { return j.state }
@@ -92,10 +94,10 @@ func (j *Job) run(now time.Time, errlog *log.Logger) {
 	}
 
 	j.prev = j.next
-	j.next = j.n.Next(j.next)
+	j.next = j.scheduler.Next(j.next)
 }
 
 // 初始化当前任务，获取其下次执行时间。
 func (j *Job) init(now time.Time) {
-	j.next = j.n.Next(now)
+	j.next = j.scheduler.Next(now)
 }

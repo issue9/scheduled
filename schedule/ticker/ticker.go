@@ -8,28 +8,27 @@ package ticker
 import (
 	"fmt"
 	"time"
+
+	"github.com/issue9/cron/schedule"
 )
 
-// Ticker 固定时间段的定时器
-type Ticker struct {
+type ticker struct {
 	dur   time.Duration
 	title string
 }
 
 // New 声明一个固定时间段的定时任务
-func New(d time.Duration) *Ticker {
-	return &Ticker{
+func New(d time.Duration) schedule.Scheduler {
+	return &ticker{
 		dur:   d,
 		title: fmt.Sprintf("每隔 %s", d),
 	}
 }
 
-// Next 实现 Nexter.Next 接口函数
-func (t *Ticker) Next(last time.Time) time.Time {
+func (t *ticker) Next(last time.Time) time.Time {
 	return last.Add(t.dur)
 }
 
-// Title 实现 Nexter.Title 接口函数
-func (t *Ticker) Title() string {
+func (t *ticker) Title() string {
 	return t.title
 }

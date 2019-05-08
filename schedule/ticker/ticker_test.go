@@ -14,16 +14,18 @@ import (
 func TestTicker(t *testing.T) {
 	a := assert.New(t)
 
-	ticker := New(5 * time.Minute)
-	a.Equal(ticker.title, ticker.Title())
+	s := New(5 * time.Minute)
+
+	ticker, ok := s.(*ticker)
+	a.True(ok).Equal(ticker.title, s.Title())
 
 	now := time.Now()
-	last := ticker.Next(now)
+	last := s.Next(now)
 	a.Equal(last, now.Add(5*time.Minute))
 
-	last2 := ticker.Next(last)
+	last2 := s.Next(last)
 	a.Equal(last2, last.Add(5*time.Minute))
 
-	last3 := ticker.Next(now)
+	last3 := s.Next(now)
 	a.Equal(last3, now.Add(5*time.Minute))
 }

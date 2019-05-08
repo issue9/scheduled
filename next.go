@@ -7,20 +7,9 @@ package cron
 import (
 	"time"
 
-	"github.com/issue9/cron/internal/expr"
-	"github.com/issue9/cron/internal/ticker"
+	"github.com/issue9/cron/schedule/expr"
+	"github.com/issue9/cron/schedule/ticker"
 )
-
-// Nexter 用于指定定时任务中下个执行时间。
-type Nexter interface {
-	// 生成下一次定时器需要的时间。相对于 last 时间。
-	//
-	// 如果不需要再执行了，则应该返回一个零值。
-	Next(last time.Time) time.Time
-
-	// Title 返回当前 Nexter 的一个名称。
-	Title() string
-}
 
 // NewTicker 添加一个新的定时任务
 func (c *Cron) NewTicker(name string, f JobFunc, dur time.Duration) error {

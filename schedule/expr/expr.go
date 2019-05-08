@@ -30,8 +30,7 @@ var direct = map[string]string{
 	"@hourly":   "0 0 * * * *",
 }
 
-// Expr 表示 cron 表达式构建的 Nexter 接口实例
-type Expr struct {
+type expr struct {
 	// 依次保存着 cron 语法中各个字段解析后的内容。
 	//
 	// 最长的秒数，最多 60 位，正好可以使用一个 uint64 保存，
@@ -47,6 +46,6 @@ type Expr struct {
 }
 
 // Title 获取标题名称
-func (e *Expr) Title() string {
+func (e *expr) Title() string {
 	return e.title
 }

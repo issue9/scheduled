@@ -24,68 +24,68 @@ func pow2(y ...uint64) uint64 {
 func TestParse(t *testing.T) {
 	a := assert.New(t)
 
-	type expr struct {
+	type test struct {
 		expr   string
 		hasErr bool
 		vals   []uint64
 	}
 
-	exprs := []*expr{
-		&expr{
+	exprs := []*test{
+		&test{
 			expr: "1-3,10,9 * 3-7 * * 1",
 			vals: []uint64{pow2(1, 2, 3, 10, 9), step, pow2(3, 4, 5, 6, 7), step, step, pow2(1)},
 		},
-		&expr{
+		&test{
 			expr: "* * * * * 1",
 			vals: []uint64{any, any, any, any, any, pow2(1)},
 		},
-		&expr{
+		&test{
 			expr: "* * * * * 0",
 			vals: []uint64{any, any, any, any, any, pow2(0)},
 		},
-		&expr{
+		&test{
 			expr: "* * * * * 6",
 			vals: []uint64{any, any, any, any, any, pow2(6)},
 		},
-		&expr{
+		&test{
 			expr: "* 3 * * * 6",
 			vals: []uint64{any, pow2(3), step, step, step, pow2(6)},
 		},
-		&expr{
+		&test{
 			expr: "@daily",
 			vals: []uint64{pow2(0), pow2(0), pow2(0), step, step, step},
 		},
-		&expr{ // 参数错误
+		&test{ // 参数错误
 			expr:   "",
 			hasErr: true,
 			vals:   nil,
 		},
-		&expr{ // 指令不存在
+		&test{ // 指令不存在
 			expr:   "@not-exists",
 			hasErr: true,
 			vals:   nil,
 		},
-		&expr{ // 解析错误
+		&test{ // 解析错误
 			expr:   "* * * * * 7-a",
 			hasErr: true,
 			vals:   nil,
 		},
-		&expr{ // 值超出范围
+		&test{ // 值超出范围
 			expr:   "* * * * * 8",
 			hasErr: true,
 			vals:   nil,
 		},
-		&expr{ // 表达式内容不够长
+		&test{ // 表达式内容不够长
 			expr:   "*",
 			hasErr: true,
 			vals:   nil,
 		},
-		&expr{ // 表达式内容太长
+		&test{ // 表达式内容太长
 			expr:   "* * * * * * x",
 			hasErr: true,
 			vals:   nil,
 		},
-		&expr{ // 都为 *
+		&test{ // 都为 *
 			expr:   "* * * * * *",
 			hasErr: true,
 			vals:   nil,
@@ -93,13 +93,15 @@ func TestParse(t *testing.T) {
 	}
 
 	for _, v := range exprs {
-		expr, err := Parse(v.expr)
+		s, err := Parse(v.expr)
 		if v.hasErr {
 			a.Error(err, "测试 %s 时出错", v.expr).
-				Nil(expr)
+				Nil(s)
 			continue
 		}
 
+		expr, ok := s.(*expr)
+		a.True(ok).NotNil(expr)
 		a.NotError(err, "测试 %s 时出错 %s", v.expr, err)
 		a.Equal(expr.data, v.vals, "测试 %s 时出错，期望值：%v，实际返回值：%v", v.expr, v.vals, expr.data)
 	}

@@ -8,14 +8,6 @@ import (
 	"testing"
 
 	"github.com/issue9/assert"
-
-	"github.com/issue9/cron/internal/expr"
-	"github.com/issue9/cron/internal/ticker"
-)
-
-var (
-	_ Nexter = &ticker.Ticker{}
-	_ Nexter = &expr.Expr{}
 )
 
 func TestCron_NewExpr(t *testing.T) {
