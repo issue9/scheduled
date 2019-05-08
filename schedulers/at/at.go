@@ -11,15 +11,19 @@ import (
 	"github.com/issue9/scheduled/schedulers"
 )
 
-const layout = "2006-01-02 15:04:05"
+// Layout Parse 解析时间的格式。同时也是 Title 返回的格式。
+const Layout = "2006-01-02 15:04:05"
 
 type scheduler struct {
 	title string
 	at    time.Time
 }
 
+// Parse 返回只在指定时间执行一次的调度器
+//
+// 时间从 Parse 中获取。
 func Parse(t string) (schedulers.Scheduler, error) {
-	at, err := time.Parse(layout, t)
+	at, err := time.Parse(Layout, t)
 	if err != nil {
 		return nil, err
 	}
@@ -27,9 +31,10 @@ func Parse(t string) (schedulers.Scheduler, error) {
 	return At(at), nil
 }
 
+// At 返回只在指定时间执行一次的调度器
 func At(t time.Time) schedulers.Scheduler {
 	return &scheduler{
-		title: t.Format(layout),
+		title: t.Format(Layout),
 		at:    t,
 	}
 }
