@@ -109,6 +109,20 @@ func TestSortJobs(t *testing.T) {
 		Equal(jobs[2].name, "1")
 }
 
+func TestServer_Jobs(t *testing.T) {
+	a := assert.New(t)
+	srv := NewServer(nil)
+	a.NotNil(srv)
+
+	now := time.Now()
+	a.NotError(srv.NewAt("j1", succFunc, now))
+	a.NotError(srv.NewAt("j3", succFunc, now))
+	a.NotError(srv.NewAt("j2", succFunc, now))
+
+	jobs := srv.Jobs()
+	a.Equal(len(jobs), len(srv.jobs))
+}
+
 func TestServer_NewCron(t *testing.T) {
 	a := assert.New(t)
 

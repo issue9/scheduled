@@ -41,6 +41,8 @@ type Job struct {
 }
 
 // New 添加一个新的定时任务
+//
+// name 作为定时任务的一个简短描述，不作唯一要求
 func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler) error {
 	if s.running {
 		return ErrRunning
@@ -115,6 +117,18 @@ func sortJobs(jobs []*Job) {
 		}
 		return jobs[i].next.Before(jobs[j].next)
 	})
+}
+
+// Jobs 返回所有注册的任务
+func (s *Server) Jobs() []*Job {
+	jobs := make([]*Job, 0, len(s.jobs))
+	jobs = append(jobs, s.jobs...)
+
+	sort.SliceStable(jobs, func(i, j int) bool {
+		return jobs[i].name < jobs[j].name
+	})
+
+	return jobs
 }
 
 // NewTicker 添加一个新的定时任务
