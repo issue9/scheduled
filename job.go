@@ -27,7 +27,7 @@ const (
 type State int8
 
 // JobFunc 每一个定时任务实际上执行的函数签名
-type JobFunc func() error
+type JobFunc func(time.Time) error
 
 // Job 一个定时任务的基本接口
 type Job struct {
@@ -89,7 +89,7 @@ func (j *Job) run(now time.Time, errlog *log.Logger) {
 	}()
 
 	j.state = Running
-	j.err = j.f()
+	j.err = j.f(now)
 
 	if j.err != nil {
 		j.state = Failed
