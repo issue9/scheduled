@@ -24,36 +24,3 @@ func TestServer_Serve(t *testing.T) {
 	time.Sleep(3 * time.Second)
 	srv.Stop()
 }
-
-func TestSortJobs(t *testing.T) {
-	a := assert.New(t)
-
-	now := time.Now()
-	jobs := []*Job{
-		&Job{
-			name: "1",
-			next: now.Add(1111),
-		},
-		&Job{
-			name: "2",
-			next: time.Time{},
-		},
-		&Job{
-			name: "3",
-			next: now,
-		},
-		&Job{
-			name: "4",
-			next: time.Time{},
-		},
-		&Job{
-			name: "5",
-			next: now.Add(222),
-		},
-	}
-
-	sortJobs(jobs)
-	a.Equal(jobs[0].name, "3").
-		Equal(jobs[1].name, "5").
-		Equal(jobs[2].name, "1")
-}

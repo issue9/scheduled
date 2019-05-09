@@ -7,6 +7,7 @@ package scheduled
 import (
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/issue9/scheduled/schedulers"
@@ -102,6 +103,18 @@ func (j *Job) run(now time.Time, errlog *log.Logger) {
 // 初始化当前任务，获取其下次执行时间。
 func (j *Job) init(now time.Time) {
 	j.next = j.scheduler.Next(now)
+}
+
+func sortJobs(jobs []*Job) {
+	sort.SliceStable(jobs, func(i, j int) bool {
+		if jobs[i].next.IsZero() {
+			return false
+		}
+		if jobs[j].next.IsZero() {
+			return true
+		}
+		return jobs[i].next.Before(jobs[j].next)
+	})
 }
 
 // NewTicker 添加一个新的定时任务

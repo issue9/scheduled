@@ -6,7 +6,6 @@ package scheduled
 
 import (
 	"log"
-	"sort"
 	"time"
 )
 
@@ -82,16 +81,4 @@ func (s *Server) Stop() {
 
 	s.running = false
 	s.stop <- struct{}{}
-}
-
-func sortJobs(jobs []*Job) {
-	sort.SliceStable(jobs, func(i, j int) bool {
-		if jobs[i].next.IsZero() {
-			return false
-		}
-		if jobs[j].next.IsZero() {
-			return true
-		}
-		return jobs[i].next.Before(jobs[j].next)
-	})
 }
