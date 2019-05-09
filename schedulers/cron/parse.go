@@ -10,8 +10,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/issue9/scheduled/schedulers"
+	"github.com/issue9/scheduled/schedulers/at"
 )
 
 const (
@@ -46,6 +48,10 @@ func (b bound) valid(v uint8) bool {
 func Parse(spec string) (schedulers.Scheduler, error) {
 	if spec == "" {
 		return nil, errors.New("参数 spec 不能为空")
+	}
+
+	if spec == "@reboot" {
+		return at.At(time.Now()), nil
 	}
 
 	if spec[0] == '@' {

@@ -20,7 +20,6 @@ const (
 
 // 常用的便捷指令
 var direct = map[string]string{
-	//"@reboot":   "TODO",
 	"@yearly":   "0 0 0 1 1 *",
 	"@annually": "0 0 0 1 1 *",
 	"@monthly":  "0 0 0 1 * *",
