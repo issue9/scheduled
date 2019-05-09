@@ -127,6 +127,7 @@ func (s *Server) NewTicker(name string, f JobFunc, dur time.Duration) error {
 //  , 表示和
 //
 // 同时支持以下便捷指令：
+//  @reboot:   启动时执行一次
 //  @yearly:   0 0 0 1 1 *
 //  @annually: 0 0 0 1 1 *
 //  @monthly:  0 0 0 1 * *
