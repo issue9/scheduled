@@ -2,20 +2,12 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
-// Package scheduled 定时任务
 package scheduled
 
 import (
-	"errors"
 	"log"
 	"sort"
 	"time"
-)
-
-// 一些错误的定义
-var (
-	ErrNoJobs  = errors.New("任务列表为空")
-	ErrRunning = errors.New("任务已经在运行")
 )
 
 // Server 管理所有的定时任务
