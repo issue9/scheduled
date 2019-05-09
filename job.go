@@ -6,11 +6,11 @@ package scheduled
 
 import (
 	"fmt"
-	"github.com/issue9/scheduled/schedulers/at"
 	"log"
 	"time"
 
 	"github.com/issue9/scheduled/schedulers"
+	"github.com/issue9/scheduled/schedulers/at"
 	"github.com/issue9/scheduled/schedulers/cron"
 	"github.com/issue9/scheduled/schedulers/ticker"
 )
@@ -111,31 +111,7 @@ func (s *Server) NewTicker(name string, f JobFunc, dur time.Duration) error {
 
 // NewCron 使用 cron 表达式新建一个定时任务
 //
-// spec 的值可以是：
-//  * * * * * *
-//  | | | | | |
-//  | | | | | --- 星期
-//  | | | | ----- 月
-//  | | | ------- 日
-//  | | --------- 小时
-//  | ----------- 分
-//  ------------- 秒
-//
-// 星期与日若同时存在，则以或的形式组合。
-//
-// 支持以下符号：
-//  - 表示范围
-//  , 表示和
-//
-// 同时支持以下便捷指令：
-//  @reboot:   启动时执行一次
-//  @yearly:   0 0 0 1 1 *
-//  @annually: 0 0 0 1 1 *
-//  @monthly:  0 0 0 1 * *
-//  @weekly:   0 0 0 * * 0
-//  @daily:    0 0 0 * * *
-//  @midnight: 0 0 0 * * *
-//  @hourly:   0 0 * * * *
+// 具体文件可以参考 schedulers/cron.Parse
 func (s *Server) NewCron(name string, f JobFunc, spec string) error {
 	scheduler, err := cron.Parse(spec)
 	if err != nil {
@@ -147,8 +123,7 @@ func (s *Server) NewCron(name string, f JobFunc, spec string) error {
 
 // NewAt 添加 At 类型的定时器
 //
-// t 为一个正常的时间，在该时间执行一次 f。若时间早于当前时间，
-// 则在启动之后立马执行，如果 t 的值为零，则不会被执行。
+// 具体文件可以参考 schedulers/at.At
 func (s *Server) NewAt(name string, f JobFunc, t time.Time) error {
 	return s.New(name, f, at.At(t))
 }

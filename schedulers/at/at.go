@@ -21,7 +21,8 @@ type scheduler struct {
 
 // Parse 返回只在指定时间执行一次的调度器
 //
-// 时间从 Parse 中获取。
+// t 为一个正常的时间字符串，在该时间执行一次 f。若时间早于当前时间，
+// 则在启动之后立马执行，如果 t 的值为零，则不会被执行。
 func Parse(t string) (schedulers.Scheduler, error) {
 	at, err := time.Parse(Layout, t)
 	if err != nil {
@@ -32,6 +33,9 @@ func Parse(t string) (schedulers.Scheduler, error) {
 }
 
 // At 返回只在指定时间执行一次的调度器
+//
+// t 为一个正常的时间，在该时间执行一次 f。若时间早于当前时间，
+// 则在启动之后立马执行，如果 t 的值为零，则不会被执行。
 func At(t time.Time) schedulers.Scheduler {
 	return &scheduler{
 		title: t.Format(Layout),

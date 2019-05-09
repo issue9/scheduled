@@ -45,6 +45,32 @@ func (b bound) valid(v uint8) bool {
 }
 
 // Parse 分析 spec 内容，得到 schedule.Scheduler 实例。
+//
+// spec 的值可以是：
+//  * * * * * *
+//  | | | | | |
+//  | | | | | --- 星期
+//  | | | | ----- 月
+//  | | | ------- 日
+//  | | --------- 小时
+//  | ----------- 分
+//  ------------- 秒
+//
+// 星期与日若同时存在，则以或的形式组合。
+//
+// 支持以下符号：
+//  - 表示范围
+//  , 表示和
+//
+// 同时支持以下便捷指令：
+//  @reboot:   启动时执行一次
+//  @yearly:   0 0 0 1 1 *
+//  @annually: 0 0 0 1 1 *
+//  @monthly:  0 0 0 1 * *
+//  @weekly:   0 0 0 * * 0
+//  @daily:    0 0 0 * * *
+//  @midnight: 0 0 0 * * *
+//  @hourly:   0 0 * * * *
 func Parse(spec string) (schedulers.Scheduler, error) {
 	if spec == "" {
 		return nil, errors.New("参数 spec 不能为空")
