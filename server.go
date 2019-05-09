@@ -13,14 +13,22 @@ import (
 type Server struct {
 	jobs    []*Job
 	stop    chan struct{}
+	loc     *time.Location
 	running bool
 }
 
 // NewServer 声明 Server 对象实例
-func NewServer() *Server {
+//
+// loc 指定当前所采用的时区，若为 nil，则会采用 time.Local 的值。
+func NewServer(loc *time.Location) *Server {
+	if loc == nil {
+		loc = time.Local
+	}
+
 	return &Server{
 		jobs: make([]*Job, 0, 100),
 		stop: make(chan struct{}, 1),
+		loc:  loc,
 	}
 }
 

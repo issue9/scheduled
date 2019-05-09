@@ -13,7 +13,7 @@ import (
 
 func TestServer_Serve(t *testing.T) {
 	a := assert.New(t)
-	srv := NewServer()
+	srv := NewServer(nil)
 	a.NotNil(srv)
 	a.Empty(srv.jobs).
 		Equal(srv.Serve(nil), ErrNoJobs)
