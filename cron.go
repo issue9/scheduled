@@ -44,6 +44,7 @@ func (s *Server) Serve(errlog *log.Logger) error {
 	s.running = true
 
 	if len(s.jobs) == 0 {
+		s.running = false
 		return ErrNoJobs
 	}
 
@@ -56,6 +57,7 @@ func (s *Server) Serve(errlog *log.Logger) error {
 		sortJobs(s.jobs)
 
 		if s.jobs[0].next.IsZero() { // 没有需要运行的任务
+			s.running = false
 			return ErrNoJobs
 		}
 

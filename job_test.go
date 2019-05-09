@@ -18,17 +18,17 @@ import (
 
 var (
 	succFunc = func() error {
-		println("succ")
+		println("succ", time.Now().String())
 		return nil
 	}
 
 	erroFunc = func() error {
-		println("erro")
+		println("erro", time.Now().String())
 		return errors.New("erro")
 	}
 
 	failFunc = func() error {
-		println("fail")
+		println("fail", time.Now().String())
 		panic("fail")
 	}
 

@@ -11,6 +11,20 @@ import (
 	"github.com/issue9/assert"
 )
 
+func TestServer_Serve(t *testing.T) {
+	a := assert.New(t)
+	srv := NewServer()
+	a.NotNil(srv)
+	a.Empty(srv.jobs).
+		Equal(srv.Serve(nil), ErrNoJobs)
+
+	srv.NewTicker("tick1", succFunc, 1*time.Second)
+	srv.NewTicker("tick2", erroFunc, 2*time.Second)
+	go srv.Serve(nil)
+	time.Sleep(3 * time.Second)
+	srv.Stop()
+}
+
 func TestSortJobs(t *testing.T) {
 	a := assert.New(t)
 
