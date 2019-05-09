@@ -30,4 +30,17 @@ func TestParse(t *testing.T) {
 	a.True(s.Next(now).Before(now)).
 		Equal(s.Next(now), s.Next(now.Add(10*time.Hour))) // 多次获取，值是相同的
 	a.Equal(s.Title(), tt)
+
+}
+
+func TestAt(t *testing.T) {
+	a := assert.New(t)
+
+	zero := time.Time{}
+	s := At(zero)
+	a.NotNil(s)
+
+	// 零值，永远返回零值。
+	a.True(s.Next(time.Now()).IsZero())
+	a.True(s.Next(time.Now()).IsZero())
 }
