@@ -31,11 +31,11 @@ type JobFunc func(time.Time) error
 
 // Job 一个定时任务的基本接口
 type Job struct {
-	name      string
-	f         JobFunc
-	scheduler schedulers.Scheduler
-	state     State
-	err       error // 出错时的错误内容
+	schedulers.Scheduler
+	name  string
+	f     JobFunc
+	state State
+	err   error // 出错时的错误内容
 
 	prev, next time.Time
 }
@@ -51,7 +51,7 @@ func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler) err
 	s.jobs = append(s.jobs, &Job{
 		name:      name,
 		f:         f,
-		scheduler: scheduler,
+		Scheduler: scheduler,
 	})
 	return nil
 }
@@ -59,8 +59,11 @@ func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler) err
 // Name 任务的名称
 func (j *Job) Name() string { return j.name }
 
-// Next 该任务关联的 Nexter 接口
-func (j *Job) Next() schedulers.Scheduler { return j.scheduler }
+// Next 返回下次执行的时间点
+func (j *Job) Next() time.Time { return j.next }
+
+// Prev 当前正在执行或是上次执行的时间点
+func (j *Job) Prev() time.Time { return j.prev }
 
 // State 获取当前的状态
 func (j *Job) State() State { return j.state }
@@ -98,13 +101,13 @@ func (j *Job) run(now time.Time, errlog *log.Logger) {
 	}
 
 	j.prev = j.next
-	j.next = j.scheduler.Next(now)
+	j.next = j.Scheduler.Next(now)
 
 }
 
 // 初始化当前任务，获取其下次执行时间。
 func (j *Job) init(now time.Time) {
-	j.next = j.scheduler.Next(now)
+	j.next = j.Scheduler.Next(now)
 }
 
 func sortJobs(jobs []*Job) {

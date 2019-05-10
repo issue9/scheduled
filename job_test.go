@@ -42,7 +42,7 @@ func TestJob_run(t *testing.T) {
 	j := &Job{
 		name:      "succ",
 		f:         succFunc,
-		scheduler: ticker.New(time.Second),
+		Scheduler: ticker.New(time.Second),
 	}
 	j.init(now)
 	j.run(now, nil)
@@ -52,7 +52,7 @@ func TestJob_run(t *testing.T) {
 	j = &Job{
 		name:      "erro",
 		f:         erroFunc,
-		scheduler: ticker.New(time.Second),
+		Scheduler: ticker.New(time.Second),
 	}
 	j.init(now)
 	j.run(now, errlog)
@@ -62,7 +62,7 @@ func TestJob_run(t *testing.T) {
 	j = &Job{
 		name:      "fail",
 		f:         failFunc,
-		scheduler: ticker.New(time.Second),
+		Scheduler: ticker.New(time.Second),
 	}
 	j.init(now)
 	j.run(now, nil)
