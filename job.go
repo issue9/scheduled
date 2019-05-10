@@ -40,26 +40,13 @@ type Job struct {
 	prev, next time.Time
 }
 
-// New 添加一个新的定时任务
-//
-// name 作为定时任务的一个简短描述，不作唯一要求
-func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler) error {
-	if s.running {
-		return ErrRunning
-	}
-
-	s.jobs = append(s.jobs, &Job{
-		name:      name,
-		f:         f,
-		Scheduler: scheduler,
-	})
-	return nil
-}
-
 // Name 任务的名称
 func (j *Job) Name() string { return j.name }
 
 // Next 返回下次执行的时间点
+//
+// 如果返回值的 IsZero() 为 true，则表示该任务不需要再执行，
+// 一般为 At 之类的一次任务。
 func (j *Job) Next() time.Time { return j.next }
 
 // Prev 当前正在执行或是上次执行的时间点
@@ -156,4 +143,20 @@ func (s *Server) NewCron(name string, f JobFunc, spec string) error {
 // 具体文件可以参考 schedulers/at.At
 func (s *Server) NewAt(name string, f JobFunc, t time.Time) error {
 	return s.New(name, f, at.At(t))
+}
+
+// New 添加一个新的定时任务
+//
+// name 作为定时任务的一个简短描述，不作唯一要求
+func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler) error {
+	if s.running {
+		return ErrRunning
+	}
+
+	s.jobs = append(s.jobs, &Job{
+		name:      name,
+		f:         f,
+		Scheduler: scheduler,
+	})
+	return nil
 }

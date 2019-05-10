@@ -7,7 +7,7 @@ package schedulers
 
 import "time"
 
-// Scheduler 为所有的时间调度算法指定一个统一的接口
+// Scheduler 时间调度算法需要实现的接口
 type Scheduler interface {
 	// 生成下一次的时间。相对于 last 时间。
 	//
