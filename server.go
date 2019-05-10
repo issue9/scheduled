@@ -60,7 +60,8 @@ func (s *Server) Serve(errlog *log.Logger) error {
 			return ErrNoJobs
 		}
 
-		dur := s.jobs[0].next.Sub(time.Now())
+		now = time.Now()
+		dur := s.jobs[0].next.Sub(now)
 		if dur < 0 {
 			dur = 0
 		}
@@ -72,7 +73,7 @@ func (s *Server) Serve(errlog *log.Logger) error {
 			return nil
 		case n := <-timer.C:
 			for _, j := range s.jobs {
-				if j.next.IsZero() || j.next.After(n) {
+				if j.next.IsZero() || j.next.After(n) || j.State() == Running {
 					break
 				}
 				go j.run(n, errlog)

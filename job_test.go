@@ -47,9 +47,7 @@ func TestJob_run(t *testing.T) {
 	j.init(now)
 	j.run(now, nil)
 	a.Nil(j.Err()).
-		Equal(j.State(), Stoped).
-		True(j.next.After(now)).
-		True(j.next.After(j.prev))
+		Equal(j.State(), Stoped)
 
 	j = &Job{
 		name:      "erro",
@@ -59,9 +57,7 @@ func TestJob_run(t *testing.T) {
 	j.init(now)
 	j.run(now, errlog)
 	a.NotNil(j.Err()).
-		Equal(j.State(), Failed).
-		True(j.next.After(now)).
-		True(j.next.After(j.prev))
+		Equal(j.State(), Failed)
 
 	j = &Job{
 		name:      "fail",
@@ -71,9 +67,7 @@ func TestJob_run(t *testing.T) {
 	j.init(now)
 	j.run(now, nil)
 	a.NotNil(j.Err()).
-		Equal(j.State(), Failed).
-		True(j.next.After(now)).
-		True(j.next.After(j.prev))
+		Equal(j.State(), Failed)
 }
 
 func TestSortJobs(t *testing.T) {
