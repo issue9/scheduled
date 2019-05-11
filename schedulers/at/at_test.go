@@ -15,32 +15,27 @@ import (
 
 var _ schedulers.Scheduler = &scheduler{}
 
-func TestParse(t *testing.T) {
+func TestAt(t *testing.T) {
 	a := assert.New(t)
 
 	// 格式错误
-	s, err := Parse("2019-01-02 13:14:")
+	s, err := At("2019-01-02 13:14:")
 	a.Error(err).Nil(s)
 
 	// 早于当前时间
 	now := time.Now()
 	tt := "2019-01-02 13:14:15"
-	s, err = Parse(tt)
+	s, err = At(tt)
 	a.NotError(err).NotNil(s)
 	a.True(s.Next(now).Before(now)).
 		Equal(s.Next(now), s.Next(now.Add(10*time.Hour))) // 多次获取，值是相同的
 	a.Equal(s.Title(), tt)
 
-}
-
-func TestAt(t *testing.T) {
-	a := assert.New(t)
-
-	zero := time.Time{}
-	s := At(zero)
-	a.NotNil(s)
-
-	// 零值，永远返回零值。
-	a.True(s.Next(time.Now()).IsZero())
-	a.True(s.Next(time.Now()).IsZero())
+	loc := time.FixedZone("UTC+8", 8*60*60)
+	ttt, err := time.ParseInLocation(Layout, tt, time.UTC)
+	a.NotError(err)
+	s, err = At(tt)
+	a.NotError(err).NotNil(s)
+	next := s.Next(time.Now().In(loc)) // 变成 8 时区，小于零时区的 loc
+	a.True(next.Before(ttt))
 }

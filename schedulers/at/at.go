@@ -17,29 +17,36 @@ const Layout = "2006-01-02 15:04:05"
 type scheduler struct {
 	title string
 	at    time.Time
-}
 
-// Parse 返回只在指定时间执行一次的调度器
-//
-// t 为一个正常的时间字符串，在该时间执行一次 f。若时间早于当前时间，
-// 则在启动之后立马执行，如果 t 的值为零，则不会被执行。
-func Parse(t string) (schedulers.Scheduler, error) {
-	at, err := time.Parse(Layout, t)
-	if err != nil {
-		return nil, err
-	}
-
-	return At(at), nil
+	month                           time.Month
+	year, day, hour, minute, second int
 }
 
 // At 返回只在指定时间执行一次的调度器
 //
-// t 为一个正常的时间，在该时间执行一次 f。若时间早于当前时间，
+// t 为一个正常的时间字符串，在该时间执行一次 f。若时间早于当前时间，
 // 则在启动之后立马执行，如果 t 的值为零，则不会被执行。
-func At(t time.Time) schedulers.Scheduler {
+func At(t string) (schedulers.Scheduler, error) {
+	tt, err := time.ParseInLocation(Layout, t, time.UTC)
+	if err != nil {
+		return nil, err
+	}
+
+	return at(tt), nil
+}
+
+func at(t time.Time) schedulers.Scheduler {
+	year, month, day := t.Date()
+	hour, minute, sec := t.Clock()
 	return &scheduler{
-		title: t.Format(Layout),
-		at:    t,
+		title:  t.Format(Layout),
+		at:     t,
+		year:   year,
+		month:  month,
+		day:    day,
+		hour:   hour,
+		minute: minute,
+		second: sec,
 	}
 }
 
@@ -48,5 +55,5 @@ func (s *scheduler) Title() string {
 }
 
 func (s *scheduler) Next(last time.Time) time.Time {
-	return s.at
+	return time.Date(s.year, s.month, s.day, s.hour, s.minute, s.second, 0, last.Location())
 }

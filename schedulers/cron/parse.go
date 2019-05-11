@@ -77,7 +77,7 @@ func Parse(spec string) (schedulers.Scheduler, error) {
 	}
 
 	if spec == "@reboot" {
-		return at.At(time.Now()), nil
+		return at.At(time.Time{}.Format(at.Layout))
 	}
 
 	if spec[0] == '@' {

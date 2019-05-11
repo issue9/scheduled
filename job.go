@@ -141,7 +141,7 @@ func (s *Server) NewCron(name string, f JobFunc, spec string) error {
 // NewAt 添加 At 类型的定时器
 //
 // 具体文件可以参考 schedulers/at.At
-func (s *Server) NewAt(name string, f JobFunc, t time.Time) error {
+func (s *Server) NewAt(name string, f JobFunc, t string) error {
 	return s.New(name, f, at.At(t))
 }
 
