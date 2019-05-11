@@ -142,7 +142,11 @@ func (s *Server) NewCron(name string, f JobFunc, spec string) error {
 //
 // 具体文件可以参考 schedulers/at.At
 func (s *Server) NewAt(name string, f JobFunc, t string) error {
-	return s.New(name, f, at.At(t))
+	scheduler, err := at.At(t)
+	if err != nil {
+		return err
+	}
+	return s.New(name, f, scheduler)
 }
 
 // New 添加一个新的定时任务
