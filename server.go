@@ -52,7 +52,7 @@ func (s *Server) Serve(errlog *log.Logger) error {
 		return ErrNoJobs
 	}
 
-	now := time.Now()
+	now := s.now()
 	for _, job := range s.jobs {
 		job.init(now)
 	}
@@ -65,7 +65,7 @@ func (s *Server) Serve(errlog *log.Logger) error {
 			return ErrNoJobs
 		}
 
-		now = time.Now()
+		now = s.now()
 		dur := s.jobs[0].next.Sub(now)
 		if dur < 0 {
 			dur = 0
@@ -95,4 +95,8 @@ func (s *Server) Stop() {
 
 	s.running = false
 	s.stop <- struct{}{}
+}
+
+func (s *Server) now() time.Time {
+	return time.Now().In(s.Location())
 }

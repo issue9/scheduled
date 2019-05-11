@@ -5,10 +5,13 @@
 package scheduled
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
 	"github.com/issue9/assert"
+
+	"github.com/issue9/scheduled/schedulers/at"
 )
 
 func TestServer_Serve(t *testing.T) {
@@ -23,4 +26,27 @@ func TestServer_Serve(t *testing.T) {
 	go srv.Serve(nil)
 	time.Sleep(3 * time.Second)
 	srv.Stop()
+}
+
+func TestServer_Serve_loc(t *testing.T) {
+	a := assert.New(t)
+
+	// 将 srv 的时区调到 15 小时前，保证 job 还没到时间
+	loc := time.FixedZone("UTC-15", -15*60*60)
+	srv := NewServer(loc)
+	a.NotError(srv)
+
+	buf := new(bytes.Buffer)
+	a.Equal(0, buf.Len())
+	job := func(t time.Time) error {
+		buf.WriteString(t.String())
+		buf.WriteString("\n")
+		return nil
+	}
+
+	now := time.Now().Format(at.Layout)
+	srv.NewAt("xxx", job, now)
+	go srv.Serve(errlog)
+	time.Sleep(3 * time.Second)
+	a.Equal(0, buf.Len(), buf.String())
 }
