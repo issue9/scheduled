@@ -16,7 +16,6 @@ const Layout = "2006-01-02 15:04:05"
 
 type scheduler struct {
 	title string
-	at    time.Time
 
 	month                           time.Month
 	year, day, hour, minute, second int
@@ -40,7 +39,6 @@ func at(t time.Time) schedulers.Scheduler {
 	hour, minute, sec := t.Clock()
 	return &scheduler{
 		title:  t.Format(Layout),
-		at:     t,
 		year:   year,
 		month:  month,
 		day:    day,
