@@ -7,12 +7,7 @@ package cron
 import "time"
 
 func (c *cron) Next(last time.Time) time.Time {
-	if c.next.After(last) {
-		return c.next
-	}
-
-	c.next = c.nextTime(last, true)
-	return c.next
+	return c.nextTime(last, true)
 }
 
 func (c *cron) nextTime(last time.Time, carry bool) time.Time {

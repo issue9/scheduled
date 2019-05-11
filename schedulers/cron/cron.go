@@ -5,8 +5,6 @@
 // Package cron 实现了 cron 表达式的 Scheduler 接口
 package cron
 
-import "time"
-
 // 表示 cron 语法表达式中的顺序
 const (
 	secondIndex = iota
@@ -40,7 +38,6 @@ type cron struct {
 	// 如果是月份这种从 1 开始的，则其第一位永远是 0
 	data []uint64
 
-	next  time.Time
 	title string
 }
 
