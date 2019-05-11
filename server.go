@@ -32,6 +32,11 @@ func NewServer(loc *time.Location) *Server {
 	}
 }
 
+// Location 返回当前任务相关联的时区信息
+func (s *Server) Location() *time.Location {
+	return s.loc
+}
+
 // Serve 运行服务
 //
 // errlog 定时任务的错误信息在此通道输出，若为空，则不输出。
