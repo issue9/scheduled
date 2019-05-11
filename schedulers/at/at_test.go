@@ -28,7 +28,7 @@ func TestAt(t *testing.T) {
 	s, err = At(tt)
 	a.NotError(err).NotNil(s)
 	a.True(s.Next(now).Before(now)).
-		Equal(s.Next(now), s.Next(now.Add(10*time.Hour))) // 多次获取，值是相同的
+		Equal(s.Next(now), zero) // 多次获取，返回零值
 	a.Equal(s.Title(), tt)
 
 	loc := time.FixedZone("UTC+8", 8*60*60)
