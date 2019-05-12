@@ -82,7 +82,7 @@ func TestSortJobs(t *testing.T) {
 		},
 		&Job{
 			name: "2",
-			next: time.Time{},
+			next: time.Time{}, // zero 放在最后
 		},
 		&Job{
 			name: "3",
@@ -90,11 +90,16 @@ func TestSortJobs(t *testing.T) {
 		},
 		&Job{
 			name: "4",
-			next: time.Time{},
+			next: time.Time{}, // zero 放在最后
 		},
 		&Job{
 			name: "5",
 			next: now.Add(222),
+		},
+		&Job{
+			name:  "6",
+			next:  now,
+			state: Running, // Running 状态，放在最后
 		},
 	}
 

@@ -94,10 +94,10 @@ func (j *Job) init(now time.Time) {
 
 func sortJobs(jobs []*Job) {
 	sort.SliceStable(jobs, func(i, j int) bool {
-		if jobs[i].next.IsZero() {
+		if jobs[i].next.IsZero() || jobs[i].State() == Running {
 			return false
 		}
-		if jobs[j].next.IsZero() {
+		if jobs[j].next.IsZero() || jobs[j].State() == Running {
 			return true
 		}
 		return jobs[i].next.Before(jobs[j].next)
