@@ -78,7 +78,6 @@ func (j *Job) run(now time.Time, errlog *log.Logger) {
 		}
 	}()
 
-	j.state = Running
 	j.err = j.f(now)
 
 	if j.err != nil {
@@ -86,10 +85,6 @@ func (j *Job) run(now time.Time, errlog *log.Logger) {
 	} else {
 		j.state = Stoped
 	}
-
-	j.prev = j.next
-	j.next = j.Scheduler.Next(now)
-
 }
 
 // 初始化当前任务，获取其下次执行时间。
