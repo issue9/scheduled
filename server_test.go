@@ -21,8 +21,8 @@ func TestServer_Serve(t *testing.T) {
 	a.Empty(srv.jobs).
 		Equal(srv.Serve(nil), ErrNoJobs)
 
-	srv.NewTicker("tick1", succFunc, 1*time.Second)
-	srv.NewTicker("tick2", erroFunc, 2*time.Second)
+	srv.NewTicker("tick1", succFunc, 1*time.Second, false)
+	srv.NewTicker("tick2", erroFunc, 2*time.Second, false)
 	go srv.Serve(nil)
 	time.Sleep(3 * time.Second)
 	srv.Stop()
@@ -45,7 +45,7 @@ func TestServer_Serve_loc(t *testing.T) {
 	}
 
 	now := time.Now().Format(at.Layout)
-	srv.NewAt("xxx", job, now)
+	srv.NewAt("xxx", job, now, false)
 	go srv.Serve(errlog)
 	time.Sleep(3 * time.Second)
 	a.Equal(0, buf.Len(), buf.String())

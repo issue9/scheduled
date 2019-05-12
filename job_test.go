@@ -33,6 +33,13 @@ var (
 		panic("fail")
 	}
 
+	// 延时两秒执行
+	delayFunc = func(n time.Time) error {
+		println("delay", n.String())
+		time.Sleep(2 * time.Second)
+		return nil
+	}
+
 	errlog = log.New(ioutil.Discard, "ERRO", 0)
 )
 
@@ -48,7 +55,8 @@ func TestJob_run(t *testing.T) {
 	j.init(now)
 	j.run(now, nil)
 	a.Nil(j.Err()).
-		Equal(j.State(), Stoped)
+		Equal(j.State(), Stoped).
+		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
 
 	j = &Job{
 		name:      "erro",
@@ -58,7 +66,8 @@ func TestJob_run(t *testing.T) {
 	j.init(now)
 	j.run(now, errlog)
 	a.NotNil(j.Err()).
-		Equal(j.State(), Failed)
+		Equal(j.State(), Failed).
+		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
 
 	j = &Job{
 		name:      "fail",
@@ -68,7 +77,34 @@ func TestJob_run(t *testing.T) {
 	j.init(now)
 	j.run(now, nil)
 	a.NotNil(j.Err()).
-		Equal(j.State(), Failed)
+		Equal(j.State(), Failed).
+		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
+
+	// delay == true
+	j = &Job{
+		name:      "delay=true",
+		f:         delayFunc,
+		Scheduler: ticker.New(time.Second),
+		delay:     true,
+	}
+	j.init(now)
+	j.run(now, nil)
+	a.Nil(j.Err()).
+		Equal(j.State(), Stoped).
+		Equal(j.Next().Unix(), now.Add(3*time.Second).Unix()) // delayFunc 延时两秒
+
+	// delay == false
+	j = &Job{
+		name:      "delay=false",
+		f:         delayFunc,
+		Scheduler: ticker.New(time.Second),
+		delay:     false,
+	}
+	j.init(now)
+	j.run(now, nil)
+	a.Nil(j.Err()).
+		Equal(j.State(), Stoped).
+		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
 }
 
 func TestSortJobs(t *testing.T) {
@@ -115,9 +151,9 @@ func TestServer_Jobs(t *testing.T) {
 	a.NotNil(srv)
 
 	now := time.Now().Format(at.Layout)
-	a.NotError(srv.NewAt("j1", succFunc, now))
-	a.NotError(srv.NewAt("j3", succFunc, now))
-	a.NotError(srv.NewAt("j2", succFunc, now))
+	a.NotError(srv.NewAt("j1", succFunc, now, false))
+	a.NotError(srv.NewAt("j3", succFunc, now, false))
+	a.NotError(srv.NewAt("j2", succFunc, now, false))
 
 	jobs := srv.Jobs()
 	a.Equal(len(jobs), len(srv.jobs))
@@ -127,6 +163,6 @@ func TestServer_NewCron(t *testing.T) {
 	a := assert.New(t)
 
 	srv := NewServer(nil)
-	a.NotError(srv.NewCron("test", nil, "* * * 3-7 * *"))
-	a.Error(srv.NewCron("test", nil, "* * * 3-7a * *"))
+	a.NotError(srv.NewCron("test", nil, "* * * 3-7 * *", false))
+	a.Error(srv.NewCron("test", nil, "* * * 3-7a * *", false))
 }

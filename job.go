@@ -32,10 +32,12 @@ type JobFunc func(time.Time) error
 // Job 一个定时任务的基本接口
 type Job struct {
 	schedulers.Scheduler
+
 	name  string
 	f     JobFunc
 	state State
 	err   error // 出错时的错误内容
+	delay bool
 
 	prev, next time.Time
 }
@@ -58,6 +60,10 @@ func (j *Job) State() State { return j.state }
 // Err 返回当前的错误信息
 func (j *Job) Err() error { return j.err }
 
+// Delay 是否在延迟执行。
+// 即从任务执行完成的时间点计算下一次执行时间。
+func (j *Job) Delay() bool { return j.delay }
+
 // 运行当前的任务
 //
 // errlog 在出错时，日志的输出通道，可以为空，表示不输出。
@@ -79,11 +85,14 @@ func (j *Job) run(now time.Time, errlog *log.Logger) {
 	}()
 
 	j.err = j.f(now)
-
 	if j.err != nil {
 		j.state = Failed
 	} else {
 		j.state = Stoped
+	}
+
+	if j.Delay() {
+		now = time.Now().In(now.Location())
 	}
 
 	j.prev = j.next
@@ -120,45 +129,47 @@ func (s *Server) Jobs() []*Job {
 }
 
 // NewTicker 添加一个新的定时任务
-func (s *Server) NewTicker(name string, f JobFunc, dur time.Duration) error {
-	return s.New(name, f, ticker.New(dur))
+func (s *Server) NewTicker(name string, f JobFunc, dur time.Duration, delay bool) error {
+	return s.New(name, f, ticker.New(dur), delay)
 }
 
 // NewCron 使用 cron 表达式新建一个定时任务
 //
 // 具体文件可以参考 schedulers/cron.Parse
-func (s *Server) NewCron(name string, f JobFunc, spec string) error {
+func (s *Server) NewCron(name string, f JobFunc, spec string, delay bool) error {
 	scheduler, err := cron.Parse(spec)
 	if err != nil {
 		return err
 	}
 
-	return s.New(name, f, scheduler)
+	return s.New(name, f, scheduler, delay)
 }
 
 // NewAt 添加 At 类型的定时器
 //
 // 具体文件可以参考 schedulers/at.At
-func (s *Server) NewAt(name string, f JobFunc, t string) error {
+func (s *Server) NewAt(name string, f JobFunc, t string, delay bool) error {
 	scheduler, err := at.At(t)
 	if err != nil {
 		return err
 	}
-	return s.New(name, f, scheduler)
+	return s.New(name, f, scheduler, delay)
 }
 
 // New 添加一个新的定时任务
 //
-// name 作为定时任务的一个简短描述，不作唯一要求
-func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler) error {
+// name 作为定时任务的一个简短描述，不作唯一要求；
+// delay 是否从任务执行完之后，才开始计算下个执行的时间点。
+func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler, delay bool) error {
 	if s.running {
 		return ErrRunning
 	}
 
 	s.jobs = append(s.jobs, &Job{
+		Scheduler: scheduler,
 		name:      name,
 		f:         f,
-		Scheduler: scheduler,
+		delay:     delay,
 	})
 	return nil
 }
