@@ -23,6 +23,7 @@ func TestServer_Serve(t *testing.T) {
 
 	srv.NewTicker("tick1", succFunc, 1*time.Second, false)
 	srv.NewTicker("tick2", erroFunc, 2*time.Second, false)
+	srv.NewTicker("delay", delayFunc, 1*time.Second, false)
 	go srv.Serve(nil)
 	time.Sleep(3 * time.Second)
 	srv.Stop()
