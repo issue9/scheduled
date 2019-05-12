@@ -86,9 +86,6 @@ func (s *Server) Serve(errlog *log.Logger) error {
 				// 中还未改变状态，已经开始新一轮的 for 循环。
 				j.state = Running
 				go j.run(n, errlog)
-
-				j.prev = j.next
-				j.next = j.Scheduler.Next(now)
 			}
 		} // end select
 	}

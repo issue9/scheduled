@@ -29,6 +29,7 @@ func TestTicker(t *testing.T) {
 	last2 := s.Next(last)
 	a.Equal(last2, last.Add(5*time.Minute))
 
+	// 与 last 相同的值调用，返回值也相同
 	last3 := s.Next(now)
-	a.Equal(last3, now.Add(5*time.Minute))
+	a.Equal(last3, last)
 }
