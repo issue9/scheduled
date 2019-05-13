@@ -42,6 +42,19 @@ type Job struct {
 	prev, next time.Time
 }
 
+func (s State) String() string {
+	switch s {
+	case Stoped:
+		return "stoped"
+	case Running:
+		return "running"
+	case Failed:
+		return "failed"
+	default:
+		return "<unknown>"
+	}
+}
+
 // Name 任务的名称
 func (j *Job) Name() string { return j.name }
 
