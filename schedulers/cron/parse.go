@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	// any 和 step 是两个特殊的标记位，需要大于 60（所有字段中，秒数越最大，
+	// any 和 step 是两个特殊的标记位，需要大于 60（所有字段中，秒数最大，
 	// 但不会超过 60）
 
 	// any 表示当前字段可以是任意值，即对值不做任意要求，
@@ -38,9 +38,9 @@ var bounds = []bound{
 	bound{min: 0, max: 7},  // weekIndex
 }
 
-type bound struct{ min, max uint8 }
+type bound struct{ min, max int }
 
-func (b bound) valid(v uint8) bool {
+func (b bound) valid(v int) bool {
 	return v >= b.min && v <= b.max
 }
 
@@ -141,48 +141,48 @@ func parseField(typ int, field string) (uint64, error) {
 	b := bounds[typ]
 	for _, v := range fields {
 		if len(v) <= 2 { // 少于 3 个字符，说明不可能有特殊字符。
-			n, err := strconv.ParseUint(v, 10, 8)
+			n, err := strconv.Atoi(v)
 			if err != nil {
 				return 0, err
 			}
 
-			if !b.valid(uint8(n)) {
+			if !b.valid(n) {
 				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n, b.min, b.max)
 			}
 
 			// 星期中的 7 替换成 0
-			if typ == weekIndex && n == uint64(b.max) {
-				n = uint64(b.min)
+			if typ == weekIndex && n == b.max {
+				n = b.min
 			}
 
-			list = append(list, n)
+			list = append(list, uint64(n))
 			continue
 		}
 
 		index := strings.IndexByte(v, '-')
 		if index >= 0 {
-			n1, err := strconv.ParseUint(v[:index], 10, 8)
+			n1, err := strconv.Atoi(v[:index])
 			if err != nil {
 				return 0, err
 			}
-			n2, err := strconv.ParseUint(v[index+1:], 10, 8)
+			n2, err := strconv.Atoi(v[index+1:])
 			if err != nil {
 				return 0, err
 			}
 
-			if !b.valid(uint8(n1)) {
+			if !b.valid(n1) {
 				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n1, b.min, b.max)
 			}
 
-			if !b.valid(uint8(n2)) {
+			if !b.valid(n2) {
 				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n2, b.min, b.max)
 			}
 
 			for i := n1; i <= n2; i++ {
-				if typ == weekIndex && i == uint64(b.max) {
+				if typ == weekIndex && i == b.max {
 					list = append(list, uint64(b.min))
 				} else {
-					list = append(list, i)
+					list = append(list, uint64(i))
 				}
 			}
 		}

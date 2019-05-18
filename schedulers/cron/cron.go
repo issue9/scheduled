@@ -5,7 +5,7 @@
 // Package cron 实现了 cron 表达式的 Scheduler 接口
 package cron
 
-// 表示 cron 语法表达式中的顺序
+// 表示 cron.data 中各个元素的索引值
 const (
 	secondIndex = iota
 	minuteIndex

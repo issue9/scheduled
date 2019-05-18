@@ -11,24 +11,23 @@ func (c *cron) Next(last time.Time) time.Time {
 }
 
 func (c *cron) nextTime(last time.Time, carry bool) time.Time {
-	second, carry := bounds[secondIndex].next(uint8(last.Second()), c.data[secondIndex], carry)
-	minute, carry := bounds[minuteIndex].next(uint8(last.Minute()), c.data[minuteIndex], carry)
-	hour, carry := bounds[hourIndex].next(uint8(last.Hour()), c.data[hourIndex], carry)
+	second, carry := bounds[secondIndex].next(last.Second(), c.data[secondIndex], carry)
+	minute, carry := bounds[minuteIndex].next(last.Minute(), c.data[minuteIndex], carry)
+	hour, carry := bounds[hourIndex].next(last.Hour(), c.data[hourIndex], carry)
 
-	var year int
-	var month, day uint8
+	var year, month, day int
 	if c.data[weekIndex] != any && c.data[weekIndex] != step {
 		year, month, day = c.nextWeekDay(last, carry)
 	} else {
 		year, month, day = c.nextMonthDay(last, carry)
 	}
 
-	return time.Date(year, time.Month(month), int(day), int(hour), int(minute), int(second), 0, last.Location())
+	return time.Date(year, time.Month(month), day, hour, minute, second, 0, last.Location())
 }
 
-func (c *cron) nextMonthDay(last time.Time, carry bool) (year int, month, day uint8) {
-	day, carry = bounds[dayIndex].next(uint8(last.Day()), c.data[dayIndex], carry)
-	month, carry = bounds[monthIndex].next(uint8(last.Month()), c.data[monthIndex], carry)
+func (c *cron) nextMonthDay(last time.Time, carry bool) (year, month, day int) {
+	day, carry = bounds[dayIndex].next(last.Day(), c.data[dayIndex], carry)
+	month, carry = bounds[monthIndex].next(int(last.Month()), c.data[monthIndex], carry)
 	year = last.Year()
 	if carry {
 		year++
@@ -40,30 +39,30 @@ func (c *cron) nextMonthDay(last time.Time, carry bool) (year int, month, day ui
 			return year, month, day
 		}
 
-		month, carry = bounds[monthIndex].next(uint8(month), c.data[monthIndex], true)
+		month, carry = bounds[monthIndex].next(month, c.data[monthIndex], true)
 		if carry {
 			year++
 		}
 	}
 }
 
-func (c *cron) nextWeekDay(last time.Time, carry bool) (year int, month, day uint8) {
+func (c *cron) nextWeekDay(last time.Time, carry bool) (year, month, day int) {
 	// 计算 week day 在当前月份中的日期
-	wday, ca := bounds[weekIndex].next(uint8(last.Weekday()), c.data[weekIndex], carry)
-	dur := int(wday) - int(last.Weekday()) // 相差的天数
+	wday, ca := bounds[weekIndex].next(int(last.Weekday()), c.data[weekIndex], carry)
+	dur := wday - int(last.Weekday()) // 相差的天数
 	if (dur < 0) || (ca && dur == 0) {
 		dur += 7
 	}
-	day = uint8(dur) + uint8(last.Day()) // wday 在当前月对应的天数
+	day = dur + last.Day() // wday 在当前月对应的天数
 	year = last.Year()
 
 	// 此处忽略返回的 c 参数。参数 carry 为 false，则肯定不会返回值为 true 的 carry
-	month, _ = bounds[monthIndex].next(uint8(last.Month()), c.data[monthIndex], false)
+	month, _ = bounds[monthIndex].next(int(last.Month()), c.data[monthIndex], false)
 	if time.Month(month) != last.Month() {
 		day = getMonthWeekDay(time.Weekday(wday), time.Month(month), year)
 	} else if days := getMonthDays(time.Month(month), year); day > days {
 		// 跨月份，还有可能跨年份
-		month, ca = bounds[monthIndex].next(uint8(month), c.data[monthIndex], true)
+		month, ca = bounds[monthIndex].next(month, c.data[monthIndex], true)
 		if ca {
 			year++
 		}
@@ -84,21 +83,21 @@ func (c *cron) nextWeekDay(last time.Time, carry bool) (year int, month, day uin
 }
 
 // 获取指定月份的天数
-func getMonthDays(month time.Month, year int) uint8 {
+func getMonthDays(month time.Month, year int) int {
 	first := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
 	last := first.AddDate(0, 1, -1)
-	return uint8(last.Day())
+	return last.Day()
 }
 
 // 获取指定 year-month 下第一个符合 weekday 对应的天数
-func getMonthWeekDay(weekday time.Weekday, month time.Month, year int) uint8 {
+func getMonthWeekDay(weekday time.Weekday, month time.Month, year int) int {
 	first := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
 	weekday -= first.Weekday()
 	if weekday < 0 {
 		weekday += 7
 	}
 	last := first.AddDate(0, 0, int(weekday))
-	return uint8(last.Day())
+	return last.Day()
 }
 
 // 从 list 中获取与 curr 最近的下一个值。
@@ -111,7 +110,7 @@ func getMonthWeekDay(weekday time.Weekday, month time.Month, year int) uint8 {
 // carry 前一个数值是否已经进位；
 // val 返回计算后的最近一个时间值；
 // c 是否需要下一个值进位。
-func (b bound) next(curr uint8, list uint64, carry bool) (val uint8, c bool) {
+func (b bound) next(curr int, list uint64, carry bool) (val int, c bool) {
 	if list == any {
 		return curr, carry
 	}
@@ -127,10 +126,10 @@ func (b bound) next(curr uint8, list uint64, carry bool) (val uint8, c bool) {
 		return curr, false
 	}
 
-	var min uint8
+	var min int
 	var hasMin bool
 	for i := b.min; i <= b.max; i++ {
-		if ((uint64(1) << i) & list) <= 0 { // 该位未被设置为 1
+		if ((uint64(1) << uint64(i)) & list) <= 0 { // 该位未被设置为 1
 			continue
 		}
 

@@ -282,7 +282,7 @@ func TestBound_next(t *testing.T) {
 	type test struct {
 		// 输入
 		typ   int
-		curr  uint8
+		curr  int
 		list  uint64
 		carry bool
 
