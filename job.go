@@ -39,7 +39,10 @@ type Job struct {
 	err   error // 出错时的错误内容
 	delay bool
 
-	prev, next time.Time
+	// prev 上次实际上执行的时间
+	// next 下一次可能执行的时间
+	// at 是由调度器在实际调用时的时间。
+	prev, next, at time.Time
 }
 
 func (s State) String() string {
@@ -80,7 +83,9 @@ func (j *Job) Delay() bool { return j.delay }
 // 运行当前的任务
 //
 // errlog 在出错时，日志的输出通道，可以为空，表示不输出。
-func (j *Job) run(now time.Time, errlog *log.Logger) {
+func (j *Job) run(errlog *log.Logger) {
+	now := j.at
+
 	defer func() {
 		if msg := recover(); msg != nil {
 			if err, ok := msg.(error); ok {

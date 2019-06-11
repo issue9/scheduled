@@ -14,6 +14,7 @@ type Server struct {
 	jobs    []*Job
 	stop    chan struct{}
 	loc     *time.Location
+	nextJob chan *Job
 	running bool
 }
 
@@ -26,9 +27,10 @@ func NewServer(loc *time.Location) *Server {
 	}
 
 	return &Server{
-		jobs: make([]*Job, 0, 100),
-		stop: make(chan struct{}, 1),
-		loc:  loc,
+		jobs:    make([]*Job, 0, 100),
+		stop:    make(chan struct{}, 1),
+		nextJob: make(chan *Job, 10),
+		loc:     loc,
 	}
 }
 
@@ -57,46 +59,56 @@ func (s *Server) Serve(errlog *log.Logger) error {
 		job.init(now)
 	}
 
+	s.schedule()
+
 	for {
-		sortJobs(s.jobs)
-
-		if s.jobs[0].next.IsZero() { // 没有需要运行的任务
-			s.running = false
-			return ErrNoJobs
+		select {
+		case <-s.stop:
+			return nil
+		case j, ok := <-s.nextJob:
+			if !ok {
+				return ErrNoJobs
+			}
+			go func() {
+				j.run(errlog)
+				s.schedule()
+			}()
 		}
-
-		now = s.now()
-		dur := s.jobs[0].next.Sub(now)
-		if dur < 0 {
-			dur = 0
-		}
-		timer := time.NewTimer(dur)
-
-		s.loop(timer, errlog)
 	}
 }
 
-func (s *Server) loop(timer *time.Timer, errlog *log.Logger) {
-	select {
-	case <-s.stop:
-		timer.Stop()
+func (s *Server) schedule() {
+	sortJobs(s.jobs)
+
+	if s.jobs[0].next.IsZero() { // 没有需要运行的任务
+		s.running = false
+		close(s.nextJob)
 		return
-	case n := <-timer.C:
-		for _, j := range s.jobs {
-			if j.State() == Running { // 上一次任务还没结束，则跳过该任务
-				continue
-			}
+	}
 
-			if j.next.IsZero() || j.next.After(n) {
-				break
-			}
+	now := s.now()
+	dur := s.jobs[0].next.Sub(now)
+	if dur < 0 {
+		dur = 0
+	}
 
-			// 确保在状态变为 running 时，才执行 go 协程，以防止在 run
-			// 中还未改变状态，已经开始新一轮的 for 循环。
-			j.state = Running
-			go j.run(n, errlog)
+	n := <-time.NewTimer(dur).C
+
+	for _, j := range s.jobs {
+		if j.State() == Running { // 上一次任务还没结束，则跳过该任务
+			continue
 		}
-	} // end select
+
+		if j.next.IsZero() || j.next.After(n) {
+			return
+		}
+
+		// 确保在状态变为 running 时，才执行 go 协程，以防止在 run
+		// 中还未改变状态，已经开始新一轮的 for 循环。
+		j.state = Running
+		j.at = n
+		s.nextJob <- j
+	}
 }
 
 // Stop 停止当前服务

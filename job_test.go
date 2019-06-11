@@ -51,9 +51,10 @@ func TestJob_run(t *testing.T) {
 		name:      "succ",
 		f:         succFunc,
 		Scheduler: ticker.New(time.Second),
+		at:        now,
 	}
 	j.init(now)
-	j.run(now, nil)
+	j.run(nil)
 	a.Nil(j.Err()).
 		Equal(j.State(), Stoped).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
@@ -62,9 +63,10 @@ func TestJob_run(t *testing.T) {
 		name:      "erro",
 		f:         erroFunc,
 		Scheduler: ticker.New(time.Second),
+		at:        now,
 	}
 	j.init(now)
-	j.run(now, errlog)
+	j.run(errlog)
 	a.NotNil(j.Err()).
 		Equal(j.State(), Failed).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
@@ -73,9 +75,10 @@ func TestJob_run(t *testing.T) {
 		name:      "fail",
 		f:         failFunc,
 		Scheduler: ticker.New(time.Second),
+		at:        now,
 	}
 	j.init(now)
-	j.run(now, nil)
+	j.run(nil)
 	a.NotNil(j.Err()).
 		Equal(j.State(), Failed).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
@@ -86,9 +89,10 @@ func TestJob_run(t *testing.T) {
 		f:         delayFunc,
 		Scheduler: ticker.New(time.Second),
 		delay:     true,
+		at:        now,
 	}
 	j.init(now)
-	j.run(now, nil)
+	j.run(nil)
 	a.Nil(j.Err()).
 		Equal(j.State(), Stoped).
 		Equal(j.Next().Unix(), now.Add(3*time.Second).Unix()) // delayFunc 延时两秒
@@ -99,9 +103,10 @@ func TestJob_run(t *testing.T) {
 		f:         delayFunc,
 		Scheduler: ticker.New(time.Second),
 		delay:     false,
+		at:        now,
 	}
 	j.init(now)
-	j.run(now, nil)
+	j.run(nil)
 	a.Nil(j.Err()).
 		Equal(j.State(), Stoped).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
