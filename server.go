@@ -72,23 +72,31 @@ func (s *Server) Serve(errlog *log.Logger) error {
 		}
 		timer := time.NewTimer(dur)
 
-		select {
-		case <-s.stop:
-			timer.Stop()
-			return nil
-		case n := <-timer.C:
-			for _, j := range s.jobs {
-				if j.next.IsZero() || j.next.After(n) || j.State() == Running {
-					break
-				}
-
-				// 确保在状态变为 running 时，才执行 go 协程，以防止在 run
-				// 中还未改变状态，已经开始新一轮的 for 循环。
-				j.state = Running
-				go j.run(n, errlog)
-			}
-		} // end select
+		s.loop(timer, errlog)
 	}
+}
+
+func (s *Server) loop(timer *time.Timer, errlog *log.Logger) {
+	select {
+	case <-s.stop:
+		timer.Stop()
+		return
+	case n := <-timer.C:
+		for _, j := range s.jobs {
+			if j.State() == Running { // 上一次任务还没结束，则跳过该任务
+				continue
+			}
+
+			if j.next.IsZero() || j.next.After(n) {
+				break
+			}
+
+			// 确保在状态变为 running 时，才执行 go 协程，以防止在 run
+			// 中还未改变状态，已经开始新一轮的 for 循环。
+			j.state = Running
+			go j.run(n, errlog)
+		}
+	} // end select
 }
 
 // Stop 停止当前服务
