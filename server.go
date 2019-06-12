@@ -6,7 +6,6 @@ package scheduled
 
 import (
 	"log"
-	"sync"
 	"time"
 )
 
@@ -81,9 +80,6 @@ func (s *Server) Serve(errlog *log.Logger) error {
 }
 
 func (s *Server) schedule() {
-	s.scheduleLocker.Lock()
-	defer s.scheduleLocker.Unlock()
-
 	sortJobs(s.jobs)
 
 	if s.jobs[0].next.IsZero() { // 没有需要运行的任务
