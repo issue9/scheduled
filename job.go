@@ -84,8 +84,6 @@ func (j *Job) Delay() bool { return j.delay }
 //
 // errlog 在出错时，日志的输出通道，可以为空，表示不输出。
 func (j *Job) run(errlog *log.Logger) {
-	now := j.at
-
 	defer func() {
 		if msg := recover(); msg != nil {
 			if err, ok := msg.(error); ok {
@@ -102,19 +100,19 @@ func (j *Job) run(errlog *log.Logger) {
 		}
 	}()
 
-	j.err = j.f(now)
+	j.err = j.f(j.at)
 	if j.err != nil {
 		j.state = Failed
 	} else {
 		j.state = Stoped
 	}
 
-	if j.Delay() {
-		now = time.Now().In(now.Location())
-	}
-
 	j.prev = j.next
-	j.next = j.Scheduler.Next(now)
+	if j.Delay() {
+		j.next = j.Scheduler.Next(time.Now().In(j.at.Location()))
+	} else {
+		j.next = j.Scheduler.Next(j.at)
+	}
 }
 
 // 初始化当前任务，获取其下次执行时间。

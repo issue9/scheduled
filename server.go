@@ -6,15 +6,21 @@ package scheduled
 
 import (
 	"log"
+	"sync"
 	"time"
 )
 
 // Server 管理所有的定时任务
 type Server struct {
-	jobs    []*Job
-	stop    chan struct{}
-	loc     *time.Location
+	jobs []*Job
+	stop chan struct{}
+	loc  *time.Location
+
+	// 需要下次运行的任务由调度算推送到此
 	nextJob chan *Job
+
+	scheduleLocker sync.Mutex
+
 	running bool
 }
 
@@ -46,7 +52,6 @@ func (s *Server) Serve(errlog *log.Logger) error {
 	if s.running {
 		return ErrRunning
 	}
-
 	s.running = true
 
 	if len(s.jobs) == 0 {
@@ -70,6 +75,9 @@ func (s *Server) Serve(errlog *log.Logger) error {
 				return ErrNoJobs
 			}
 			go func() {
+				// 确保在状态变为 running 时，才执行 go 协程，以防止在 run
+				// 中还未改变状态，已经开始新一轮的 for 循环。
+				j.state = Running
 				j.run(errlog)
 				s.schedule()
 			}()
@@ -78,6 +86,9 @@ func (s *Server) Serve(errlog *log.Logger) error {
 }
 
 func (s *Server) schedule() {
+	s.scheduleLocker.Lock()
+	defer s.scheduleLocker.Unlock()
+
 	sortJobs(s.jobs)
 
 	if s.jobs[0].next.IsZero() { // 没有需要运行的任务
@@ -103,9 +114,6 @@ func (s *Server) schedule() {
 			return
 		}
 
-		// 确保在状态变为 running 时，才执行 go 协程，以防止在 run
-		// 中还未改变状态，已经开始新一轮的 for 循环。
-		j.state = Running
 		j.at = n
 		s.nextJob <- j
 	}
