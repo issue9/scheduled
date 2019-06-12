@@ -18,8 +18,7 @@ type Server struct {
 	// 需要下次运行的任务由调度算推送到此
 	nextJob chan *Job
 
-	scheduleLocker sync.Mutex
-	timer          *time.Timer
+	timer *time.Timer
 
 	running bool
 }
@@ -73,6 +72,9 @@ func (s *Server) Serve(errlog *log.Logger) error {
 		case j := <-s.nextJob:
 			go func() {
 				j.run(errlog)
+				if s.timer != nil {
+					s.timer.Stop()
+				}
 				s.schedule()
 			}()
 		}
@@ -82,20 +84,27 @@ func (s *Server) Serve(errlog *log.Logger) error {
 func (s *Server) schedule() {
 	sortJobs(s.jobs)
 
-	if s.jobs[0].next.IsZero() { // 没有需要运行的任务
+	// 下一次计划任务执行的时间
+	next := s.jobs[0].next
+
+	if next.IsZero() { // 没有需要运行的任务
 		s.running = false
 		s.Stop()
 		return
 	}
 
-	now := s.now()
-	dur := s.jobs[0].next.Sub(now)
+	dur := next.Sub(s.now())
 	if dur < 0 {
 		dur = 0
 	}
 
 	s.timer = time.NewTimer(dur)
-	n := <-s.timer.C
+
+	// s.timer 可能造成 schedule 函数的长时间等待
+	n, ok := <-s.timer.C
+	if !ok {
+		return
+	}
 
 	for _, j := range s.jobs {
 		if j.State() == Running { // 上一次任务还没结束，则跳过该任务
