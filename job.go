@@ -83,7 +83,7 @@ func (j *Job) Delay() bool { return j.delay }
 // 运行当前的任务
 //
 // errlog 在出错时，日志的输出通道，可以为空，表示不输出。
-func (j *Job) run(errlog *log.Logger) {
+func (j *Job) run(errlog, infolog *log.Logger) {
 	defer func() {
 		if msg := recover(); msg != nil {
 			if err, ok := msg.(error); ok {
@@ -100,7 +100,12 @@ func (j *Job) run(errlog *log.Logger) {
 		}
 	}()
 
+	// 第一条执行语句，保证最快的初始化状态为 Running
 	j.state = Running
+
+	if infolog != nil {
+		infolog.Printf("scheduled: start job %s at %s\n", j.Name(), j.at.String())
+	}
 
 	j.err = j.f(j.at)
 	if j.err != nil {

@@ -49,8 +49,9 @@ func (s *Server) Location() *time.Location {
 
 // Serve 运行服务
 //
-// errlog 定时任务的错误信息在此通道输出，若为空，则不输出。
-func (s *Server) Serve(errlog *log.Logger) error {
+// errlog 定时任务的错误信息在此通道输出，若为空，则不输出；
+// infolog 如果不为空，则会输出一些额外的提示信息，方便调试。
+func (s *Server) Serve(errlog, infolog *log.Logger) error {
 	if s.running {
 		return ErrRunning
 	}
@@ -74,7 +75,7 @@ func (s *Server) Serve(errlog *log.Logger) error {
 			return nil
 		case j := <-s.nextJob:
 			go func() {
-				j.run(errlog)
+				j.run(errlog, infolog)
 				s.schedule()
 			}()
 		}
@@ -140,9 +141,14 @@ func (s *Server) Stop() {
 	}
 
 	s.running = false
+
 	if s.timer != nil {
 		s.timer.Stop()
 	}
+
+	// NOTE: 不能通过关闭 nextJob 来结束 Server。
+	// 因为 schedule() 是异步执行的，
+	// 会源源不断地推内容到 nextJob，如果关闭，可能会造成 schedule() panic
 	s.stop <- struct{}{}
 }
 

@@ -47,7 +47,7 @@ func TestServer_Serve1(t *testing.T) {
 	}, &incr{}, false))
 
 	go func() {
-		a.NotError(srv.Serve(nil))
+		a.NotError(srv.Serve(nil, nil))
 	}()
 
 	<-time.NewTimer(6 * time.Second).C
@@ -61,12 +61,12 @@ func TestServer_Serve(t *testing.T) {
 	srv := NewServer(nil)
 	a.NotNil(srv)
 	a.Empty(srv.jobs).
-		Equal(srv.Serve(nil), ErrNoJobs)
+		Equal(srv.Serve(nil, nil), ErrNoJobs)
 
 	a.NotError(srv.NewTicker("tick1", succFunc, 1*time.Second, false))
 	a.NotError(srv.NewTicker("tick2", erroFunc, 2*time.Second, false))
 	a.NotError(srv.NewTicker("delay", delayFunc, 1*time.Second, false))
-	go srv.Serve(nil)
+	go srv.Serve(nil, nil)
 	time.Sleep(3 * time.Second)
 	srv.Stop()
 }
@@ -89,7 +89,7 @@ func TestServer_Serve_loc(t *testing.T) {
 
 	now := time.Now().Format(at.Layout)
 	srv.NewAt("xxx", job, now, false)
-	go srv.Serve(errlog)
+	go srv.Serve(errlog, nil)
 	time.Sleep(3 * time.Second)
 	a.Equal(0, buf.Len(), buf.String())
 }
