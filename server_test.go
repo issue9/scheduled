@@ -6,6 +6,7 @@ package scheduled
 
 import (
 	"bytes"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -14,6 +15,47 @@ import (
 	"github.com/issue9/scheduled/schedulers/at"
 )
 
+type incr struct {
+	count int
+}
+
+func (i *incr) Next(t time.Time) time.Time {
+	i.count += 2
+	return t.Add(time.Duration(i.count) * time.Second)
+}
+
+func (i *incr) Title() string {
+	return "递增"
+}
+
+func TestServr_Serve1(t *testing.T) {
+	a := assert.New(t)
+	srv := NewServer(nil)
+	a.NotNil(srv)
+
+	var ticker1 int64
+	var ticker2 int64
+
+	a.NotError(srv.New("ticker2", func(t time.Time) error {
+		atomic.AddInt64(&ticker2, 1)
+		return nil
+	}, &incr{}, false))
+
+	a.NotError(srv.NewTicker("ticker1", func(t time.Time) error {
+		atomic.AddInt64(&ticker1, 1)
+		return nil
+	}, time.Second, false))
+
+	go func() {
+		a.NotError(srv.Serve(nil))
+	}()
+
+	<-time.NewTimer(5 * time.Second).C
+	srv.Stop()
+	println(ticker1, ticker2)
+	a.True(ticker1 > ticker2, ticker1, ticker2)
+}
+
 func TestServer_Serve(t *testing.T) {
 	a := assert.New(t)
 	srv := NewServer(nil)
@@ -21,9 +63,9 @@ func TestServer_Serve(t *testing.T) {
 	a.Empty(srv.jobs).
 		Equal(srv.Serve(nil), ErrNoJobs)
 
-	srv.NewTicker("tick1", succFunc, 1*time.Second, false)
-	srv.NewTicker("tick2", erroFunc, 2*time.Second, false)
-	srv.NewTicker("delay", delayFunc, 1*time.Second, false)
+	a.NotError(srv.NewTicker("tick1", succFunc, 1*time.Second, false))
+	a.NotError(srv.NewTicker("tick2", erroFunc, 2*time.Second, false))
+	a.NotError(srv.NewTicker("delay", delayFunc, 1*time.Second, false))
 	go srv.Serve(nil)
 	time.Sleep(3 * time.Second)
 	srv.Stop()

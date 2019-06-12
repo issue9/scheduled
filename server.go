@@ -20,6 +20,7 @@ type Server struct {
 	nextJob chan *Job
 
 	scheduleLocker sync.Mutex
+	timer          *time.Timer
 
 	running bool
 }
@@ -97,7 +98,8 @@ func (s *Server) schedule() {
 		dur = 0
 	}
 
-	n := <-time.NewTimer(dur).C
+	s.timer = time.NewTimer(dur)
+	n := <-s.timer.C
 
 	for _, j := range s.jobs {
 		if j.State() == Running { // 上一次任务还没结束，则跳过该任务
@@ -120,6 +122,9 @@ func (s *Server) Stop() {
 	}
 
 	s.running = false
+	if s.timer != nil {
+		s.timer.Stop()
+	}
 	s.stop <- struct{}{}
 }
 
