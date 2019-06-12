@@ -100,6 +100,8 @@ func (j *Job) run(errlog *log.Logger) {
 		}
 	}()
 
+	j.state = Running
+
 	j.err = j.f(j.at)
 	if j.err != nil {
 		j.state = Failed
