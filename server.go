@@ -6,21 +6,24 @@ package scheduled
 
 import (
 	"log"
+	"sync"
 	"time"
 )
 
 // Server 管理所有的定时任务
 type Server struct {
+	// 任务列表
+	// 调度算法会保证按执行时间顺序进行排序。
 	jobs []*Job
-	stop chan struct{}
-	loc  *time.Location
 
-	// 需要下次运行的任务由调度算推送到此
+	// 需要立马运行的任务
 	nextJob chan *Job
 
-	timer *time.Timer
-
-	running bool
+	timer          *time.Timer
+	scheduleLocker sync.Mutex
+	stop           chan struct{}
+	loc            *time.Location
+	running        bool
 }
 
 // NewServer 声明 Server 对象实例
@@ -72,16 +75,26 @@ func (s *Server) Serve(errlog *log.Logger) error {
 		case j := <-s.nextJob:
 			go func() {
 				j.run(errlog)
-				if s.timer != nil {
-					s.timer.Stop()
-				}
 				s.schedule()
 			}()
 		}
 	}
 }
 
+// 调度计划任务
+//
+// 每完成一个计划任务时，都会调用此函数重新计算调度时间，
+// 并重新生成一个最近时间的定时器。如果上一个定时器还未结束，
+// 则会自动结束上一个定时器，schedule 会保证同一时间，
+// 只有一个函数实例在运行。
 func (s *Server) schedule() {
+	if s.timer != nil {
+		s.timer.Stop() // 多次调用或是已过期，都不会 panic
+	}
+
+	s.scheduleLocker.Lock()
+	defer s.scheduleLocker.Unlock()
+
 	sortJobs(s.jobs)
 
 	// 下一次计划任务执行的时间
