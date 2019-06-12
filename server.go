@@ -70,10 +70,7 @@ func (s *Server) Serve(errlog *log.Logger) error {
 		select {
 		case <-s.stop:
 			return nil
-		case j, ok := <-s.nextJob:
-			if !ok {
-				return ErrNoJobs
-			}
+		case j := <-s.nextJob:
 			go func() {
 				j.run(errlog)
 				s.schedule()
@@ -90,7 +87,7 @@ func (s *Server) schedule() {
 
 	if s.jobs[0].next.IsZero() { // 没有需要运行的任务
 		s.running = false
-		close(s.nextJob)
+		s.Stop()
 		return
 	}
 
