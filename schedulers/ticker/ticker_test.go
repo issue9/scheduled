@@ -17,19 +17,35 @@ var _ schedulers.Scheduler = &ticker{}
 func TestTicker(t *testing.T) {
 	a := assert.New(t)
 
-	s := New(5 * time.Minute)
+	a.Panic(func() {
+		New(300*time.Microsecond, false)
+	})
+
+	s := New(5*time.Minute, false)
+	a.NotNil(s)
 
 	ticker, ok := s.(*ticker)
 	a.True(ok).Equal(ticker.title, s.Title())
 
 	now := time.Now()
-	last := s.Next(now)
-	a.Equal(last, now.Add(5*time.Minute))
+	next1 := s.Next(now)
+	a.Equal(next1.Unix(), now.Add(5*time.Minute).Unix())
 
-	last2 := s.Next(last)
-	a.Equal(last2, last.Add(5*time.Minute))
+	next2 := s.Next(next1)
+	a.Equal(next2.Unix(), next1.Add(5*time.Minute).Unix())
 
-	// 与 last 相同的值调用，返回值也相同
-	last3 := s.Next(now)
-	a.Equal(last3, last)
+	// 与 next1 相同的值调用，返回值也相同
+	next3 := s.Next(now)
+	a.Equal(next3.Unix(), next1.Unix())
+
+	// imm == false
+
+	s = New(5*time.Minute, true)
+	a.NotNil(s)
+	now = time.Now()
+	next1 = s.Next(now)
+	a.Equal(next1.Unix(), now.Unix())
+
+	next2 = s.Next(next1)
+	a.Equal(next2.Unix(), now.Add(5*time.Minute).Unix())
 }

@@ -36,10 +36,10 @@ func TestServer_Serve1(t *testing.T) {
 	var ticker1 int64
 	var ticker2 int64
 
-	a.NotError(srv.NewTicker("ticker1", func(t time.Time) error {
+	a.NotError(srv.Tick("ticker1", func(t time.Time) error {
 		atomic.AddInt64(&ticker1, 1)
 		return nil
-	}, time.Second, false))
+	}, time.Second, false, false))
 
 	a.NotError(srv.New("ticker2", func(t time.Time) error {
 		atomic.AddInt64(&ticker2, 1)
@@ -63,9 +63,9 @@ func TestServer_Serve(t *testing.T) {
 	a.Empty(srv.jobs).
 		Equal(srv.Serve(nil, nil), ErrNoJobs)
 
-	a.NotError(srv.NewTicker("tick1", succFunc, 1*time.Second, false))
-	a.NotError(srv.NewTicker("tick2", erroFunc, 2*time.Second, false))
-	a.NotError(srv.NewTicker("delay", delayFunc, 1*time.Second, false))
+	a.NotError(srv.Tick("tick1", succFunc, 1*time.Second, false, false))
+	a.NotError(srv.Tick("tick2", erroFunc, 2*time.Second, false, false))
+	a.NotError(srv.Tick("delay", delayFunc, 1*time.Second, false, false))
 	go srv.Serve(nil, nil)
 	time.Sleep(3 * time.Second)
 	srv.Stop()
@@ -88,7 +88,7 @@ func TestServer_Serve_loc(t *testing.T) {
 	}
 
 	now := time.Now().Format(at.Layout)
-	srv.NewAt("xxx", job, now, false)
+	srv.At("xxx", job, now, false)
 	go srv.Serve(errlog, nil)
 	time.Sleep(3 * time.Second)
 	a.Equal(0, buf.Len(), buf.String())

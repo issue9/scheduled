@@ -50,7 +50,7 @@ func TestJob_run(t *testing.T) {
 	j := &Job{
 		name:      "succ",
 		f:         succFunc,
-		Scheduler: ticker.New(time.Second),
+		Scheduler: ticker.New(time.Second, false),
 		at:        now,
 	}
 	j.init(now)
@@ -62,7 +62,7 @@ func TestJob_run(t *testing.T) {
 	j = &Job{
 		name:      "erro",
 		f:         erroFunc,
-		Scheduler: ticker.New(time.Second),
+		Scheduler: ticker.New(time.Second, false),
 		at:        now,
 	}
 	j.init(now)
@@ -74,7 +74,7 @@ func TestJob_run(t *testing.T) {
 	j = &Job{
 		name:      "fail",
 		f:         failFunc,
-		Scheduler: ticker.New(time.Second),
+		Scheduler: ticker.New(time.Second, false),
 		at:        now,
 	}
 	j.init(now)
@@ -87,7 +87,7 @@ func TestJob_run(t *testing.T) {
 	j = &Job{
 		name:      "delay=true",
 		f:         delayFunc,
-		Scheduler: ticker.New(time.Second),
+		Scheduler: ticker.New(time.Second, false),
 		delay:     true,
 		at:        now,
 	}
@@ -101,7 +101,7 @@ func TestJob_run(t *testing.T) {
 	j = &Job{
 		name:      "delay=false",
 		f:         delayFunc,
-		Scheduler: ticker.New(time.Second),
+		Scheduler: ticker.New(time.Second, false),
 		delay:     false,
 		at:        now,
 	}
@@ -156,9 +156,9 @@ func TestServer_Jobs(t *testing.T) {
 	a.NotNil(srv)
 
 	now := time.Now().Format(at.Layout)
-	a.NotError(srv.NewAt("j1", succFunc, now, false))
-	a.NotError(srv.NewAt("j3", succFunc, now, false))
-	a.NotError(srv.NewAt("j2", succFunc, now, false))
+	a.NotError(srv.At("j1", succFunc, now, false))
+	a.NotError(srv.At("j3", succFunc, now, false))
+	a.NotError(srv.At("j2", succFunc, now, false))
 
 	jobs := srv.Jobs()
 	a.Equal(len(jobs), len(srv.jobs))
@@ -168,6 +168,6 @@ func TestServer_NewCron(t *testing.T) {
 	a := assert.New(t)
 
 	srv := NewServer(nil)
-	a.NotError(srv.NewCron("test", nil, "* * * 3-7 * *", false))
-	a.Error(srv.NewCron("test", nil, "* * * 3-7a * *", false))
+	a.NotError(srv.Cron("test", nil, "* * * 3-7 * *", false))
+	a.Error(srv.Cron("test", nil, "* * * 3-7a * *", false))
 }

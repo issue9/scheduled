@@ -151,15 +151,15 @@ func (s *Server) Jobs() []*Job {
 	return jobs
 }
 
-// NewTicker 添加一个新的定时任务
-func (s *Server) NewTicker(name string, f JobFunc, dur time.Duration, delay bool) error {
-	return s.New(name, f, ticker.New(dur), delay)
+// Tick 添加一个新的定时任务
+func (s *Server) Tick(name string, f JobFunc, dur time.Duration, imm, delay bool) error {
+	return s.New(name, f, ticker.New(dur, imm), delay)
 }
 
-// NewCron 使用 cron 表达式新建一个定时任务
+// Cron 使用 cron 表达式新建一个定时任务
 //
 // 具体文件可以参考 schedulers/cron.Parse
-func (s *Server) NewCron(name string, f JobFunc, spec string, delay bool) error {
+func (s *Server) Cron(name string, f JobFunc, spec string, delay bool) error {
 	scheduler, err := cron.Parse(spec)
 	if err != nil {
 		return fmt.Errorf("解析参数 spec 出错：%s" + err.Error())
@@ -168,10 +168,10 @@ func (s *Server) NewCron(name string, f JobFunc, spec string, delay bool) error 
 	return s.New(name, f, scheduler, delay)
 }
 
-// NewAt 添加 At 类型的定时器
+// At 添加 At 类型的定时器
 //
 // 具体文件可以参考 schedulers/at.At
-func (s *Server) NewAt(name string, f JobFunc, t string, delay bool) error {
+func (s *Server) At(name string, f JobFunc, t string, delay bool) error {
 	scheduler, err := at.At(t)
 	if err != nil {
 		return fmt.Errorf("解析参数 t 出错：%s" + err.Error())

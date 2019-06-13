@@ -30,9 +30,9 @@ expr := func() error {
     return err
 }
 
-srv.NewTicker(ticker, 1*time.Minute)
-srv.NewCron(expr, "@daily")
-srv.NewCron(expr, "* * 1 * * *")
+srv.Tick(ticker, 1*time.Minute, false, false)
+srv.Cron(expr, "@daily", false)
+srv.Cron(expr, "* * 1 * * *", false)
 
 log.Panic(srv.Serve())
 ```
