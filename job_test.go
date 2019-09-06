@@ -56,7 +56,7 @@ func TestJob_run(t *testing.T) {
 	j.init(now)
 	j.run(nil, nil)
 	a.Nil(j.Err()).
-		Equal(j.State(), Stoped).
+		Equal(j.State(), Stopped).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
 
 	j = &Job{
@@ -94,7 +94,7 @@ func TestJob_run(t *testing.T) {
 	j.init(now)
 	j.run(nil, nil)
 	a.Nil(j.Err()).
-		Equal(j.State(), Stoped).
+		Equal(j.State(), Stopped).
 		Equal(j.Next().Unix(), now.Add(3*time.Second).Unix()) // delayFunc 延时两秒
 
 	// delay == false
@@ -108,7 +108,7 @@ func TestJob_run(t *testing.T) {
 	j.init(now)
 	j.run(nil, nil)
 	a.Nil(j.Err()).
-		Equal(j.State(), Stoped).
+		Equal(j.State(), Stopped).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
 }
 

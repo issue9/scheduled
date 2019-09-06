@@ -18,7 +18,7 @@ import (
 
 // 表示任务状态
 const (
-	Stoped State = iota
+	Stopped State = iota
 	Running
 	Failed
 )
@@ -47,8 +47,8 @@ type Job struct {
 
 func (s State) String() string {
 	switch s {
-	case Stoped:
-		return "stoped"
+	case Stopped:
+		return "stopped"
 	case Running:
 		return "running"
 	case Failed:
@@ -111,7 +111,7 @@ func (j *Job) run(errlog, infolog *log.Logger) {
 	if j.err != nil {
 		j.state = Failed
 	} else {
-		j.state = Stoped
+		j.state = Stopped
 	}
 
 	j.prev = j.next
