@@ -98,10 +98,9 @@ func getMonthWeekDay(weekday time.Weekday, month time.Month, year int) int {
 	return last.Day()
 }
 
-// 从 list 中获取与 curr 最近的下一个值。
+// 从 list 中获取与 curr 最近的下一个值
 //
-// 如果 carry 为 false，且 curr 存在于 list
-// 则有可能返回 curr 本身。
+// 如果 carry 为 false，且 curr 存在于 list 则有可能返回 curr 本身。
 //
 // curr 当前的时间值；
 // list 可用的时间值；

@@ -14,19 +14,6 @@ import (
 	"github.com/issue9/scheduled/schedulers/at"
 )
 
-const (
-	// any 和 step 是两个特殊的标记位，需要大于 60（所有字段中，秒数最大，
-	// 但不会超过 60）
-
-	// any 表示当前字段可以是任意值，即对值不做任意要求，
-	// 甚至可以一直是相同的值，也不会做累加。
-	any = 1 << 61
-
-	// step 表示当前字段是允许范围内的所有值。
-	// 每次计算时，按其当前值加 1 即可。
-	step = 1 << 62
-)
-
 var bounds = []bound{
 	{min: 0, max: 59}, // secondIndex
 	{min: 0, max: 59}, // minuteIndex
@@ -42,9 +29,9 @@ func (b bound) valid(v int) bool {
 	return v >= b.min && v <= b.max
 }
 
-// Parse 根据 spec 初始化 schedule.Scheduler
+// Parse 根据 spec 初始化 schedulers.Scheduler
 //
-// spec 的值可以是：
+// spec 的格式如下：
 //  * * * * * *
 //  | | | | | |
 //  | | | | | --- 星期

@@ -9,7 +9,9 @@ import (
 	"github.com/issue9/scheduled/schedulers"
 )
 
-// Layout Parse 解析时间的格式。同时也是 Title 返回的格式。
+// Layout Parse 解析时间的格式
+//
+// 同时也是 Title 返回的格式。
 const Layout = "2006-01-02 15:04:05"
 
 var zero = time.Time{}

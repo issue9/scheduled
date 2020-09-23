@@ -1,12 +1,12 @@
 scheduled
-[![Build Status](https://travis-ci.org/issue9/scheduled.svg?branch=master)](https://travis-ci.org/issue9/scheduled)
+[![Go](https://github.com/issue9/scheduled/workflows/Go/badge.svg)](https://github.com/issue9/scheduled/actions?query=workflow%3AGo)
 [![license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://opensource.org/licenses/MIT)
 [![codecov](https://codecov.io/gh/issue9/scheduled/branch/master/graph/badge.svg)](https://codecov.io/gh/issue9/scheduled)
 [![Go version](https://img.shields.io/badge/Go-1.13-brightgreen.svg?style=flat)](https://golang.org)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/issue9/scheduled)](https://pkg.go.dev/github.com/issue9/scheduled)
 ======
 
-scheduled 是一个计划任务管理工具。
+scheduled 是一个计划任务管理工具
 
 通过 scheduled 可以实现管理类似 linux 中 crontab 功能的计划任务功能。
 当然功能并不止于此，用户可以实现自己的调度算法，定制任务的启动机制。
