@@ -1,6 +1,4 @@
-// Copyright 2019 by caixw, All rights reserved.
-// Use of this source code is governed by a MIT
-// license that can be found in the LICENSE file.
+// SPDX-License-Identifier: MIT
 
 package scheduled
 
@@ -76,7 +74,8 @@ func (j *Job) State() State { return j.state }
 // Err 返回当前的错误信息
 func (j *Job) Err() error { return j.err }
 
-// Delay 是否在延迟执行。
+// Delay 是否在延迟执行
+//
 // 即从任务执行完成的时间点计算下一次执行时间。
 func (j *Job) Delay() bool { return j.delay }
 

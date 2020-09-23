@@ -1,6 +1,4 @@
-// Copyright 2019 by caixw, All rights reserved.
-// Use of this source code is governed by a MIT
-// license that can be found in the LICENSE file.
+// SPDX-License-Identifier: MIT
 
 package cron
 
@@ -44,7 +42,7 @@ func (b bound) valid(v int) bool {
 	return v >= b.min && v <= b.max
 }
 
-// Parse 分析 spec 内容，得到 schedule.Scheduler 实例。
+// Parse 根据 spec 初始化 schedule.Scheduler
 //
 // spec 的值可以是：
 //  * * * * * *
@@ -72,15 +70,12 @@ func (b bound) valid(v int) bool {
 //  @midnight: 0 0 0 * * *
 //  @hourly:   0 0 * * * *
 func Parse(spec string) (schedulers.Scheduler, error) {
-	if spec == "" {
+	switch {
+	case spec == "":
 		return nil, errors.New("参数 spec 不能为空")
-	}
-
-	if spec == "@reboot" {
+	case spec == "@reboot":
 		return at.At(time.Time{}.Format(at.Layout))
-	}
-
-	if spec[0] == '@' {
+	case spec[0] == '@':
 		d, found := direct[spec]
 		if !found {
 			return nil, errors.New("未找到指令:" + spec)

@@ -1,8 +1,6 @@
-// Copyright 2019 by caixw, All rights reserved.
-// Use of this source code is governed by a MIT
-// license that can be found in the LICENSE file.
+// SPDX-License-Identifier: MIT
 
-// Package scheduled 是一个计划任务管理工具
+// Package scheduled 个计划任务管理工具
 //
 // 通过 scheduled 可以实现管理类似 linux 中 crontab 功能的计划任务功能。
 // 当然功能并不止于此，用户可以实现自己的调度算法，定制任务的启动机制。
