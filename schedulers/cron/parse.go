@@ -30,12 +30,12 @@ const (
 )
 
 var bounds = []bound{
-	bound{min: 0, max: 59}, // secondIndex
-	bound{min: 0, max: 59}, // minuteIndex
-	bound{min: 0, max: 23}, // hourIndex
-	bound{min: 1, max: 31}, // dayIndex
-	bound{min: 1, max: 12}, // monthIndex
-	bound{min: 0, max: 7},  // weekIndex
+	{min: 0, max: 59}, // secondIndex
+	{min: 0, max: 59}, // minuteIndex
+	{min: 0, max: 23}, // hourIndex
+	{min: 1, max: 31}, // dayIndex
+	{min: 1, max: 12}, // monthIndex
+	{min: 0, max: 7},  // weekIndex
 }
 
 type bound struct{ min, max int }

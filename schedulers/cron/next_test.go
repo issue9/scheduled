@@ -22,7 +22,7 @@ func TestExpr_Next(t *testing.T) {
 	}
 
 	var data = []*test{
-		&test{
+		{
 			expr: "1 * * * * *",
 			times: []string{
 				"2019-01-01 00:00:00",
@@ -33,7 +33,7 @@ func TestExpr_Next(t *testing.T) {
 			},
 		},
 
-		&test{
+		{
 			expr: "* 1 * * * *",
 			times: []string{
 				"2019-01-01 00:00:00",
@@ -44,7 +44,7 @@ func TestExpr_Next(t *testing.T) {
 			},
 		},
 
-		&test{
+		{
 			expr: "1 22 3 * * *",
 			times: []string{
 				"2019-01-01 00:00:00",
@@ -54,7 +54,7 @@ func TestExpr_Next(t *testing.T) {
 			},
 		},
 
-		&test{ // 未指定日，只指定了星期
+		{ // 未指定日，只指定了星期
 			expr: "1 22 3 * * 3",
 			times: []string{
 				"2019-01-01 00:00:00",
@@ -68,7 +68,7 @@ func TestExpr_Next(t *testing.T) {
 			},
 		},
 
-		&test{ // 指定了日和星期
+		{ // 指定了日和星期
 			expr: "1 22 3 5 * 3",
 			times: []string{
 				"2019-01-01 00:00:00",
@@ -83,7 +83,7 @@ func TestExpr_Next(t *testing.T) {
 			},
 		},
 
-		&test{ // 未指定日，只指定了星期，以及跨月份
+		{ // 未指定日，只指定了星期，以及跨月份
 			expr: "1 22 3 * 3,7 3",
 			times: []string{
 				"2019-01-01 00:00:00",
@@ -109,7 +109,7 @@ func TestExpr_Next(t *testing.T) {
 			},
 		},
 
-		&test{ // 未指定日，只指定了星期，以及跨月份
+		{ // 未指定日，只指定了星期，以及跨月份
 			expr: "1 22 3 * 3 3",
 			times: []string{
 				"2019-01-01 00:00:00",
@@ -125,7 +125,7 @@ func TestExpr_Next(t *testing.T) {
 			},
 		},
 
-		&test{
+		{
 			expr: "1,5 22 3 29 2 *", // 2.29 的相关测试
 			times: []string{
 				"2019-01-01 00:00:00",
@@ -136,7 +136,7 @@ func TestExpr_Next(t *testing.T) {
 			},
 		},
 
-		&test{
+		{
 			expr: "1 22 3 31 * *", // 每个月 31 号
 			times: []string{
 				"2019-01-01 00:00:00",
@@ -238,31 +238,31 @@ func TestGetMonthWeekDay(t *testing.T) {
 	}
 
 	data := []*test{
-		&test{
+		{
 			year:    2019,
 			month:   time.May,
 			weekday: time.Wednesday,
 			day:     1,
 		},
-		&test{
+		{
 			year:    2019,
 			month:   time.May,
 			weekday: time.Saturday,
 			day:     4,
 		},
-		&test{
+		{
 			year:    2019,
 			month:   time.May,
 			weekday: time.Sunday,
 			day:     5,
 		},
-		&test{
+		{
 			year:    2020,
 			month:   time.February,
 			weekday: time.Saturday,
 			day:     1,
 		},
-		&test{
+		{
 			year:    2020,
 			month:   time.February,
 			weekday: time.Tuesday,
@@ -292,7 +292,7 @@ func TestBound_next(t *testing.T) {
 	}
 
 	var data = []*test{
-		&test{
+		{
 			typ:   secondIndex,
 			curr:  0,
 			list:  pow2(1, 3, 5),
@@ -301,7 +301,7 @@ func TestBound_next(t *testing.T) {
 			c:     false,
 		},
 
-		&test{
+		{
 			typ:   secondIndex,
 			curr:  1,
 			list:  pow2(1, 3, 5),
@@ -310,7 +310,7 @@ func TestBound_next(t *testing.T) {
 			c:     false,
 		},
 
-		&test{
+		{
 			typ:   secondIndex,
 			curr:  1,
 			list:  pow2(1, 3, 5),
@@ -319,7 +319,7 @@ func TestBound_next(t *testing.T) {
 			c:     false,
 		},
 
-		&test{
+		{
 			typ:   secondIndex,
 			curr:  5,
 			list:  pow2(1, 3, 5),
@@ -328,7 +328,7 @@ func TestBound_next(t *testing.T) {
 			c:     false,
 		},
 
-		&test{
+		{
 			typ:   secondIndex,
 			curr:  59,
 			list:  any,
@@ -337,7 +337,7 @@ func TestBound_next(t *testing.T) {
 			c:     false,
 		},
 
-		&test{
+		{
 			typ:   secondIndex,
 			curr:  59,
 			list:  step,
@@ -346,7 +346,7 @@ func TestBound_next(t *testing.T) {
 			c:     false,
 		},
 
-		&test{
+		{
 			typ:   secondIndex,
 			curr:  59,
 			list:  step,
@@ -355,7 +355,7 @@ func TestBound_next(t *testing.T) {
 			c:     true,
 		},
 
-		&test{
+		{
 			typ:   secondIndex,
 			curr:  5,
 			list:  pow2(1, 3, 5),
@@ -364,7 +364,7 @@ func TestBound_next(t *testing.T) {
 			c:     true,
 		},
 
-		&test{
+		{
 			typ:   secondIndex,
 			curr:  5,
 			list:  any,
@@ -373,7 +373,7 @@ func TestBound_next(t *testing.T) {
 			c:     true,
 		},
 
-		&test{
+		{
 			typ:   secondIndex,
 			curr:  5,
 			list:  any,
@@ -382,7 +382,7 @@ func TestBound_next(t *testing.T) {
 			c:     false,
 		},
 
-		&test{
+		{
 			typ:   secondIndex,
 			curr:  5,
 			list:  step,
@@ -391,7 +391,7 @@ func TestBound_next(t *testing.T) {
 			c:     false,
 		},
 
-		&test{
+		{
 			typ:   secondIndex,
 			curr:  5,
 			list:  step,
@@ -400,7 +400,7 @@ func TestBound_next(t *testing.T) {
 			c:     false,
 		},
 
-		&test{
+		{
 			typ:   dayIndex,
 			curr:  5,
 			list:  step,
@@ -409,7 +409,7 @@ func TestBound_next(t *testing.T) {
 			c:     false,
 		},
 
-		&test{
+		{
 			typ:   dayIndex,
 			curr:  5,
 			list:  step,
@@ -418,7 +418,7 @@ func TestBound_next(t *testing.T) {
 			c:     false,
 		},
 
-		&test{
+		{
 			typ:   dayIndex,
 			curr:  4,
 			list:  pow2(1, 3, 4, 7),
