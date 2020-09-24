@@ -3,107 +3,10 @@
 package cron
 
 import (
-	"math"
 	"testing"
 
 	"github.com/issue9/assert"
 )
-
-// 2**y1 + 2**y2 + 2**y3 ...
-func pow2(y ...uint64) uint64 {
-	var p float64
-
-	for _, yy := range y {
-		p += math.Pow(2, float64(yy))
-	}
-	return uint64(p)
-}
-
-func TestParse(t *testing.T) {
-	a := assert.New(t)
-
-	type test struct {
-		expr   string
-		hasErr bool
-		vals   []uint64
-	}
-
-	exprs := []*test{
-		{
-			expr: "1-3,10,9 * 3-7 * * 1",
-			vals: []uint64{pow2(1, 2, 3, 10, 9), step, pow2(3, 4, 5, 6, 7), step, step, pow2(1)},
-		},
-		{
-			expr: "* * * * * 1",
-			vals: []uint64{any, any, any, any, any, pow2(1)},
-		},
-		{
-			expr: "* * * * * 0",
-			vals: []uint64{any, any, any, any, any, pow2(0)},
-		},
-		{
-			expr: "* * * * * 6",
-			vals: []uint64{any, any, any, any, any, pow2(6)},
-		},
-		{
-			expr: "* 3 * * * 6",
-			vals: []uint64{any, pow2(3), step, step, step, pow2(6)},
-		},
-		{
-			expr: "@daily",
-			vals: []uint64{pow2(0), pow2(0), pow2(0), step, step, step},
-		},
-		{ // 参数错误
-			expr:   "",
-			hasErr: true,
-			vals:   nil,
-		},
-		{ // 指令不存在
-			expr:   "@not-exists",
-			hasErr: true,
-			vals:   nil,
-		},
-		{ // 解析错误
-			expr:   "* * * * * 7-a",
-			hasErr: true,
-			vals:   nil,
-		},
-		{ // 值超出范围
-			expr:   "* * * * * 8",
-			hasErr: true,
-			vals:   nil,
-		},
-		{ // 表达式内容不够长
-			expr:   "*",
-			hasErr: true,
-			vals:   nil,
-		},
-		{ // 表达式内容太长
-			expr:   "* * * * * * x",
-			hasErr: true,
-			vals:   nil,
-		},
-		{ // 都为 *
-			expr:   "* * * * * *",
-			hasErr: true,
-			vals:   nil,
-		},
-	}
-
-	for _, v := range exprs {
-		s, err := Parse(v.expr)
-		if v.hasErr {
-			a.Error(err, "测试 %s 时出错", v.expr).
-				Nil(s)
-			continue
-		}
-
-		c, ok := s.(*cron)
-		a.True(ok).NotNil(c)
-		a.NotError(err, "测试 %s 时出错 %s", v.expr, err)
-		a.Equal(c.data, v.vals, "测试 %s 时出错，期望值：%v，实际返回值：%v", v.expr, v.vals, c.data)
-	}
-}
 
 func TestParseField(t *testing.T) {
 	a := assert.New(t)
@@ -112,7 +15,7 @@ func TestParseField(t *testing.T) {
 		typ    int
 		field  string
 		hasErr bool
-		vals   uint64
+		vals   bits
 	}
 
 	fs := []*field{
@@ -247,5 +150,165 @@ func TestParseField(t *testing.T) {
 
 		a.NotError(err)
 		a.Equal(val, v.vals, "测试 %s 时出错 实际返回:%d，期望值：%d", v.field, val, v.vals)
+	}
+}
+
+func TestBound_next(t *testing.T) {
+	a := assert.New(t)
+
+	type test struct {
+		// 输入
+		typ   int
+		curr  int
+		bits  bits
+		carry bool
+
+		// 输出
+		v uint8
+		c bool
+	}
+
+	var data = []*test{
+		{
+			typ:   secondIndex,
+			curr:  0,
+			bits:  pow2(1, 3, 5),
+			carry: true,
+			v:     1,
+			c:     false,
+		},
+
+		{
+			typ:   secondIndex,
+			curr:  1,
+			bits:  pow2(1, 3, 5),
+			carry: false,
+			v:     1,
+			c:     false,
+		},
+
+		{
+			typ:   secondIndex,
+			curr:  1,
+			bits:  pow2(1, 3, 5),
+			carry: true,
+			v:     3,
+			c:     false,
+		},
+
+		{
+			typ:   secondIndex,
+			curr:  5,
+			bits:  pow2(1, 3, 5),
+			carry: false,
+			v:     5,
+			c:     false,
+		},
+
+		{
+			typ:   secondIndex,
+			curr:  59,
+			bits:  any,
+			carry: false,
+			v:     59,
+			c:     false,
+		},
+
+		{
+			typ:   secondIndex,
+			curr:  59,
+			bits:  step,
+			carry: false,
+			v:     59,
+			c:     false,
+		},
+
+		{
+			typ:   secondIndex,
+			curr:  59,
+			bits:  step,
+			carry: true,
+			v:     0,
+			c:     true,
+		},
+
+		{
+			typ:   secondIndex,
+			curr:  5,
+			bits:  pow2(1, 3, 5),
+			carry: true,
+			v:     1,
+			c:     true,
+		},
+
+		{
+			typ:   secondIndex,
+			curr:  5,
+			bits:  any,
+			carry: true,
+			v:     5,
+			c:     true,
+		},
+
+		{
+			typ:   secondIndex,
+			curr:  5,
+			bits:  any,
+			carry: false,
+			v:     5,
+			c:     false,
+		},
+
+		{
+			typ:   secondIndex,
+			curr:  5,
+			bits:  step,
+			carry: true,
+			v:     6,
+			c:     false,
+		},
+
+		{
+			typ:   secondIndex,
+			curr:  5,
+			bits:  step,
+			carry: false,
+			v:     5,
+			c:     false,
+		},
+
+		{
+			typ:   dayIndex,
+			curr:  5,
+			bits:  step,
+			carry: false,
+			v:     5,
+			c:     false,
+		},
+
+		{
+			typ:   dayIndex,
+			curr:  5,
+			bits:  step,
+			carry: true,
+			v:     6,
+			c:     false,
+		},
+
+		{
+			typ:   dayIndex,
+			curr:  4,
+			bits:  pow2(1, 3, 4, 7),
+			carry: true,
+			v:     7,
+			c:     false,
+		},
+	}
+
+	for i, item := range data {
+		b := bounds[item.typ]
+		v, c := item.bits.next(item.curr, b, item.carry)
+		a.Equal(v, item.v, "data[%d] 错误，实际返回:%d 期望值:%d", i, v, item.v).
+			Equal(c, item.c, "data[%d] 错误，实际返回:%v 期望值:%v", i, c, item.c)
 	}
 }

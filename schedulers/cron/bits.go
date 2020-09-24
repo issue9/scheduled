@@ -1,0 +1,181 @@
+// SPDX-License-Identifier: MIT
+
+package cron
+
+import (
+	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+)
+
+// 表示 cron 语法中每一个字段的数据
+//
+// 最长的秒数，最多 60 位，正好可以使用一个 uint64 保存，
+// 其它类型也各自占一个字段长度。
+//
+// 其中每个字段中，从 0 位到高位，每一位表示一个值，比如在秒字段中，
+//  0,1,7 表示为 ...10000011
+// 如果是月份这种从 1 开始的，则其第一位永远是 0
+type bits uint64
+
+const (
+	// any 和 step 是两个特殊的标记位，需要大于 60（所有字段中，秒数最大，
+	// 但不会超过 60）
+
+	// any 表示当前字段可以是任意值，即对值不做任意要求，
+	// 甚至可以一直是相同的值，也不会做累加。
+	any bits = 1 << 61
+
+	// step 表示当前字段是允许范围内的所有值。
+	// 每次计算时，按其当前值加 1 即可。
+	step bits = 1 << 62
+)
+
+var bounds = []bound{
+	{min: 0, max: 59}, // secondIndex
+	{min: 0, max: 59}, // minuteIndex
+	{min: 0, max: 23}, // hourIndex
+	{min: 1, max: 31}, // dayIndex
+	{min: 1, max: 12}, // monthIndex
+	{min: 0, max: 7},  // weekIndex
+}
+
+type bound struct{ min, max int }
+
+func (b bound) valid(v int) bool {
+	return v >= b.min && v <= b.max
+}
+
+// 分析单个数字域内容
+//
+// field 可以是以下格式：
+//  *
+//  n1-n2
+//  n1,n2
+//  n1-n2,n3-n4,n5
+func parseField(typ int, field string) (bits, error) {
+	if field == "*" {
+		return any, nil
+	}
+
+	fields := strings.FieldsFunc(field, func(r rune) bool { return r == ',' })
+	list := make([]uint64, 0, len(fields))
+
+	b := bounds[typ]
+	for _, v := range fields {
+		if len(v) <= 2 { // 少于 3 个字符，说明不可能有特殊字符。
+			n, err := strconv.Atoi(v)
+			if err != nil {
+				return 0, err
+			}
+
+			if !b.valid(n) {
+				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n, b.min, b.max)
+			}
+
+			// 星期中的 7 替换成 0
+			if typ == weekIndex && n == b.max {
+				n = b.min
+			}
+
+			list = append(list, uint64(n))
+			continue
+		}
+
+		index := strings.IndexByte(v, '-')
+		if index >= 0 {
+			n1, err := strconv.Atoi(v[:index])
+			if err != nil {
+				return 0, err
+			}
+			n2, err := strconv.Atoi(v[index+1:])
+			if err != nil {
+				return 0, err
+			}
+
+			if !b.valid(n1) {
+				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n1, b.min, b.max)
+			}
+
+			if !b.valid(n2) {
+				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n2, b.min, b.max)
+			}
+
+			for i := n1; i <= n2; i++ {
+				if typ == weekIndex && i == b.max {
+					list = append(list, uint64(b.min))
+				} else {
+					list = append(list, uint64(i))
+				}
+			}
+		}
+	}
+
+	sort.SliceStable(list, func(i, j int) bool {
+		return list[i] < list[j]
+	})
+
+	for i := 1; i < len(list); i++ {
+		if list[i] == list[i-1] {
+			return 0, fmt.Errorf("重复的值 %d", list[i])
+		}
+	}
+
+	var ret bits
+	for _, v := range list {
+		ret |= (1 << v)
+	}
+	return ret, nil
+}
+
+// 获取 bits 中与 curr 最近的下一个值
+//
+// curr 当前的时间值；
+// b 范围值；
+// carry 前一个数值是否已经进位；
+// val 返回计算后的最近一个时间值；
+// c 是否需要下一个值进位。
+//
+// 如果 carry 为 false，且 curr 存在于 bits 则有可能返回 curr 本身。
+func (bs bits) next(curr int, b bound, carry bool) (val int, c bool) {
+	if bs == any { // any 表示对当前值没有要求，不需要增加值。
+		return curr, carry
+	}
+
+	if bs == step {
+		if carry {
+			curr++
+		}
+
+		if curr > b.max {
+			return b.min, true
+		}
+		return curr, false
+	}
+
+	min := -1 // 记录 bs 中最小位表示的值，-1 表示未记录该值。
+	for i := b.min; i <= b.max; i++ {
+		if ((uint64(1) << uint64(i)) & uint64(bs)) <= 0 { // 该位未被设置为 1
+			continue
+		}
+
+		if i > curr {
+			return i, false
+		}
+
+		if min == -1 {
+			min = i
+		}
+
+		if i == curr {
+			if !carry {
+				return i, false
+			}
+			carry = false
+		}
+	} // end for
+
+	// 大于当前列表的最大值，则返回列表中的最小值，并设置进位标记
+	return min, true
+}

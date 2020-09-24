@@ -3,6 +3,15 @@
 // Package cron 实现了 cron 表达式的 Scheduler 接口
 package cron
 
+import (
+	"errors"
+	"strings"
+	"time"
+
+	"github.com/issue9/scheduled/schedulers"
+	"github.com/issue9/scheduled/schedulers/at"
+)
+
 // 表示 cron.data 中各个元素的索引值
 const (
 	secondIndex = iota
@@ -12,19 +21,6 @@ const (
 	monthIndex
 	weekIndex
 	indexSize
-)
-
-const (
-	// any 和 step 是两个特殊的标记位，需要大于 60（所有字段中，秒数最大，
-	// 但不会超过 60）
-
-	// any 表示当前字段可以是任意值，即对值不做任意要求，
-	// 甚至可以一直是相同的值，也不会做累加。
-	any = 1 << 61
-
-	// step 表示当前字段是允许范围内的所有值。
-	// 每次计算时，按其当前值加 1 即可。
-	step = 1 << 62
 )
 
 // 常用的便捷指令
@@ -40,14 +36,7 @@ var direct = map[string]string{
 
 type cron struct {
 	// 依次保存着 cron 语法中各个字段解析后的内容。
-	//
-	// 最长的秒数，最多 60 位，正好可以使用一个 uint64 保存，
-	// 其它类型也各自占一个字段长度。
-	//
-	// 其中每个字段中，从 0 位到高位，每一位表示一个值，比如在秒字段中，
-	//  0,1,7 表示为 ...10000011
-	// 如果是月份这种从 1 开始的，则其第一位永远是 0
-	data []uint64
+	data []bits
 
 	title string
 }
@@ -55,4 +44,80 @@ type cron struct {
 // Title 获取标题名称
 func (c *cron) Title() string {
 	return c.title
+}
+
+// Parse 根据 spec 初始化 schedulers.Scheduler
+//
+// spec 的格式如下：
+//  * * * * * *
+//  | | | | | |
+//  | | | | | --- 星期
+//  | | | | ----- 月
+//  | | | ------- 日
+//  | | --------- 小时
+//  | ----------- 分
+//  ------------- 秒
+//
+// 星期与日若同时存在，则以或的形式组合。
+//
+// 支持以下符号：
+//  - 表示范围
+//  , 表示和
+//
+// 同时支持以下便捷指令：
+//  @reboot:   启动时执行一次
+//  @yearly:   0 0 0 1 1 *
+//  @annually: 0 0 0 1 1 *
+//  @monthly:  0 0 0 1 * *
+//  @weekly:   0 0 0 * * 0
+//  @daily:    0 0 0 * * *
+//  @midnight: 0 0 0 * * *
+//  @hourly:   0 0 * * * *
+func Parse(spec string) (schedulers.Scheduler, error) {
+	switch {
+	case spec == "":
+		return nil, errors.New("参数 spec 不能为空")
+	case spec == "@reboot":
+		return at.At(time.Time{}.Format(at.Layout))
+	case spec[0] == '@':
+		d, found := direct[spec]
+		if !found {
+			return nil, errors.New("未找到指令:" + spec)
+		}
+		spec = d
+	}
+
+	fields := strings.Fields(spec)
+	if len(fields) != indexSize {
+		return nil, errors.New("长度不正确")
+	}
+
+	c := &cron{
+		title: spec,
+		data:  make([]bits, indexSize),
+	}
+
+	allAny := true // 是否所有字段都是 any
+	for i, field := range fields {
+		vals, err := parseField(i, field)
+		if err != nil {
+			return nil, err
+		}
+
+		if allAny && vals != any {
+			allAny = false
+		}
+
+		if !allAny && vals == any {
+			vals = step
+		}
+
+		c.data[i] = vals
+	}
+
+	if allAny { // 所有项都为 *
+		return nil, errors.New("所有项都为 *")
+	}
+
+	return c, nil
 }
