@@ -15,7 +15,7 @@ func TestParseField(t *testing.T) {
 		typ    int
 		field  string
 		hasErr bool
-		vals   bits
+		vals   fields
 	}
 
 	fs := []*field{
@@ -153,14 +153,14 @@ func TestParseField(t *testing.T) {
 	}
 }
 
-func TestBound_next(t *testing.T) {
+func TestBits_next(t *testing.T) {
 	a := assert.New(t)
 
 	type test struct {
 		// 输入
 		typ   int
 		curr  int
-		bits  bits
+		bits  fields
 		carry bool
 
 		// 输出
@@ -306,8 +306,7 @@ func TestBound_next(t *testing.T) {
 	}
 
 	for i, item := range data {
-		b := bounds[item.typ]
-		v, c := item.bits.next(item.curr, b, item.carry)
+		v, c := item.bits.next(item.curr, bounds[item.typ], item.carry)
 		a.Equal(v, item.v, "data[%d] 错误，实际返回:%d 期望值:%d", i, v, item.v).
 			Equal(c, item.c, "data[%d] 错误，实际返回:%v 期望值:%v", i, c, item.c)
 	}

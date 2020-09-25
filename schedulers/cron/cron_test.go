@@ -14,13 +14,13 @@ import (
 var _ schedulers.Scheduler = &cron{}
 
 // 2**y1 + 2**y2 + 2**y3 ...
-func pow2(y ...uint64) bits {
+func pow2(y ...uint64) fields {
 	var p float64
 
 	for _, yy := range y {
 		p += math.Pow(2, float64(yy))
 	}
-	return bits(p)
+	return fields(p)
 }
 
 func TestParse(t *testing.T) {
@@ -29,33 +29,33 @@ func TestParse(t *testing.T) {
 	type test struct {
 		expr   string
 		hasErr bool
-		vals   []bits
+		vals   []fields
 	}
 
 	exprs := []*test{
 		{
 			expr: "1-3,10,9 * 3-7 * * 1",
-			vals: []bits{pow2(1, 2, 3, 10, 9), step, pow2(3, 4, 5, 6, 7), step, step, pow2(1)},
+			vals: []fields{pow2(1, 2, 3, 10, 9), step, pow2(3, 4, 5, 6, 7), step, step, pow2(1)},
 		},
 		{
 			expr: "* * * * * 1",
-			vals: []bits{any, any, any, any, any, pow2(1)},
+			vals: []fields{any, any, any, any, any, pow2(1)},
 		},
 		{
 			expr: "* * * * * 0",
-			vals: []bits{any, any, any, any, any, pow2(0)},
+			vals: []fields{any, any, any, any, any, pow2(0)},
 		},
 		{
 			expr: "* * * * * 6",
-			vals: []bits{any, any, any, any, any, pow2(6)},
+			vals: []fields{any, any, any, any, any, pow2(6)},
 		},
 		{
 			expr: "* 3 * * * 6",
-			vals: []bits{any, pow2(3), step, step, step, pow2(6)},
+			vals: []fields{any, pow2(3), step, step, step, pow2(6)},
 		},
 		{
 			expr: "@daily",
-			vals: []bits{pow2(0), pow2(0), pow2(0), step, step, step},
+			vals: []fields{pow2(0), pow2(0), pow2(0), step, step, step},
 		},
 		{ // 参数错误
 			expr:   "",

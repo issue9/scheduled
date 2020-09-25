@@ -36,7 +36,7 @@ var direct = map[string]string{
 
 type cron struct {
 	// 依次保存着 cron 语法中各个字段解析后的内容。
-	data []bits
+	data []fields
 
 	title string
 }
@@ -87,18 +87,18 @@ func Parse(spec string) (schedulers.Scheduler, error) {
 		spec = d
 	}
 
-	fields := strings.Fields(spec)
-	if len(fields) != indexSize {
+	fs := strings.Fields(spec)
+	if len(fs) != indexSize {
 		return nil, errors.New("长度不正确")
 	}
 
 	c := &cron{
 		title: spec,
-		data:  make([]bits, indexSize),
+		data:  make([]fields, indexSize),
 	}
 
 	allAny := true // 是否所有字段都是 any
-	for i, field := range fields {
+	for i, field := range fs {
 		vals, err := parseField(i, field)
 		if err != nil {
 			return nil, err

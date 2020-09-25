@@ -4,6 +4,7 @@ package cron
 
 import (
 	"fmt"
+	"math/bits"
 	"sort"
 	"strconv"
 	"strings"
@@ -17,7 +18,7 @@ import (
 // 其中每个字段中，从 0 位到高位，每一位表示一个值，比如在秒字段中，
 //  0,1,7 表示为 ...10000011
 // 如果是月份这种从 1 开始的，则其第一位永远是 0
-type bits uint64
+type fields uint64
 
 const (
 	// any 和 step 是两个特殊的标记位，需要大于 60（所有字段中，秒数最大，
@@ -25,11 +26,11 @@ const (
 
 	// any 表示当前字段可以是任意值，即对值不做任意要求，
 	// 甚至可以一直是相同的值，也不会做累加。
-	any bits = 1 << 61
+	any fields = 1 << 61
 
 	// step 表示当前字段是允许范围内的所有值。
 	// 每次计算时，按其当前值加 1 即可。
-	step bits = 1 << 62
+	step fields = 1 << 62
 )
 
 var bounds = []bound{
@@ -47,6 +48,45 @@ func (b bound) valid(v int) bool {
 	return v >= b.min && v <= b.max
 }
 
+// 第一个非零值
+
+// 获取 fields 中与 curr 最近的下一个值
+//
+// curr 当前的时间值；
+// typ 字段类型；
+// greater 是否必须要大于 curr 这个值；
+// val 返回计算后的最近一个时间值；
+// c 是否需要下一个值进位。
+func (fs fields) next(curr int, b bound, greater bool) (val int, c bool) {
+	if fs == any { // any 表示对当前值没有要求，不需要增加值。
+		return curr, greater
+	} else if fs == step {
+		if greater {
+			curr++
+		}
+
+		if curr > b.max {
+			return b.min, true
+		}
+		return curr, false
+	}
+
+	for i := curr; i <= b.max; i++ {
+		if ((uint64(1) << uint64(i)) & uint64(fs)) <= 0 { // 该位未被设置为 1
+			continue
+		}
+
+		if i > curr {
+			return i, false
+		} else if i == curr && !greater {
+			return i, false
+		}
+	}
+
+	// 大于当前列表的最大值，则返回列表中的最小值，并设置进位标记
+	return bits.TrailingZeros64(uint64(fs)), true
+}
+
 // 分析单个数字域内容
 //
 // field 可以是以下格式：
@@ -54,16 +94,16 @@ func (b bound) valid(v int) bool {
 //  n1-n2
 //  n1,n2
 //  n1-n2,n3-n4,n5
-func parseField(typ int, field string) (bits, error) {
+func parseField(typ int, field string) (fields, error) {
 	if field == "*" {
 		return any, nil
 	}
 
-	fields := strings.FieldsFunc(field, func(r rune) bool { return r == ',' })
-	list := make([]uint64, 0, len(fields))
+	fs := strings.FieldsFunc(field, func(r rune) bool { return r == ',' })
+	list := make([]uint64, 0, len(fs))
 
 	b := bounds[typ]
-	for _, v := range fields {
+	for _, v := range fs {
 		if len(v) <= 2 { // 少于 3 个字符，说明不可能有特殊字符。
 			n, err := strconv.Atoi(v)
 			if err != nil {
@@ -122,60 +162,9 @@ func parseField(typ int, field string) (bits, error) {
 		}
 	}
 
-	var ret bits
+	var ret fields
 	for _, v := range list {
 		ret |= (1 << v)
 	}
 	return ret, nil
-}
-
-// 获取 bits 中与 curr 最近的下一个值
-//
-// curr 当前的时间值；
-// b 范围值；
-// carry 前一个数值是否已经进位；
-// val 返回计算后的最近一个时间值；
-// c 是否需要下一个值进位。
-//
-// 如果 carry 为 false，且 curr 存在于 bits 则有可能返回 curr 本身。
-func (bs bits) next(curr int, b bound, carry bool) (val int, c bool) {
-	if bs == any { // any 表示对当前值没有要求，不需要增加值。
-		return curr, carry
-	}
-
-	if bs == step {
-		if carry {
-			curr++
-		}
-
-		if curr > b.max {
-			return b.min, true
-		}
-		return curr, false
-	}
-
-	min := -1 // 记录 bs 中最小位表示的值，-1 表示未记录该值。
-	for i := b.min; i <= b.max; i++ {
-		if ((uint64(1) << uint64(i)) & uint64(bs)) <= 0 { // 该位未被设置为 1
-			continue
-		}
-
-		if i > curr {
-			return i, false
-		}
-
-		if min == -1 {
-			min = i
-		}
-
-		if i == curr {
-			if !carry {
-				return i, false
-			}
-			carry = false
-		}
-	} // end for
-
-	// 大于当前列表的最大值，则返回列表中的最小值，并设置进位标记
-	return min, true
 }
