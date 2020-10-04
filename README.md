@@ -13,9 +13,9 @@ scheduled 是一个计划任务管理工具
 
 目前 scheduled 内置了以下三种算法：
 
-- cron 实现了 crontab 中的大部分语法功能；
 - at 在固定的时间点执行一次任务；
-- ticker 以固定的时间段执行任务，与 time.Ticker 相同。
+- cron 实现了 crontab 中的大部分语法功能；
+- ticker 以固定的时间段执行任务，与 time.Ticker 相同；
 
 ```go
 srv := scheduled.NewServer(time.UTC)

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-// Package ticker 时间段固定的定时器，功能与 time.Ticker 相同。
+// Package ticker 时间段固定的定时器
 package ticker
 
 import (
