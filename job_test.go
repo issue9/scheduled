@@ -11,6 +11,7 @@ import (
 
 	"github.com/issue9/assert"
 
+	"github.com/issue9/scheduled/schedulers"
 	"github.com/issue9/scheduled/schedulers/at"
 	"github.com/issue9/scheduled/schedulers/ticker"
 )
@@ -45,10 +46,16 @@ func TestJob_run(t *testing.T) {
 	a := assert.New(t)
 	now := time.Now()
 
+	newTickerJob := func(duration time.Duration, imm bool) schedulers.Scheduler {
+		s, err := ticker.New(duration, imm)
+		a.NotError(err).NotNil(s)
+		return s
+	}
+
 	j := &Job{
 		name:      "succ",
 		f:         succFunc,
-		Scheduler: ticker.New(time.Second, false),
+		Scheduler: newTickerJob(time.Second, false),
 		at:        now,
 	}
 	j.init(now)
@@ -60,7 +67,7 @@ func TestJob_run(t *testing.T) {
 	j = &Job{
 		name:      "erro",
 		f:         erroFunc,
-		Scheduler: ticker.New(time.Second, false),
+		Scheduler: newTickerJob(time.Second, false),
 		at:        now,
 	}
 	j.init(now)
@@ -72,7 +79,7 @@ func TestJob_run(t *testing.T) {
 	j = &Job{
 		name:      "fail",
 		f:         failFunc,
-		Scheduler: ticker.New(time.Second, false),
+		Scheduler: newTickerJob(time.Second, false),
 		at:        now,
 	}
 	j.init(now)
@@ -85,7 +92,7 @@ func TestJob_run(t *testing.T) {
 	j = &Job{
 		name:      "delay=true",
 		f:         delayFunc,
-		Scheduler: ticker.New(time.Second, false),
+		Scheduler: newTickerJob(time.Second, false),
 		delay:     true,
 		at:        now,
 	}
@@ -99,7 +106,7 @@ func TestJob_run(t *testing.T) {
 	j = &Job{
 		name:      "delay=false",
 		f:         delayFunc,
-		Scheduler: ticker.New(time.Second, false),
+		Scheduler: newTickerJob(time.Second, false),
 		delay:     false,
 		at:        now,
 	}

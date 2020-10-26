@@ -4,6 +4,7 @@
 package ticker
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -20,16 +21,16 @@ type ticker struct {
 //
 // imm 是否立即执行一次任务，如果为 true，
 // 则会在第一次调用 last 时返回当前时间。
-func New(d time.Duration, imm bool) schedulers.Scheduler {
+func New(d time.Duration, imm bool) (schedulers.Scheduler, error) {
 	if d < time.Second {
-		panic("参数 d 的值必须在 1 秒以上")
+		return nil, errors.New("参数 d 的值必须在 1 秒以上")
 	}
 
 	return &ticker{
 		dur:   d,
 		title: fmt.Sprintf("每隔 %s", d),
 		imm:   imm,
-	}
+	}, nil
 }
 
 func (t *ticker) Next(last time.Time) time.Time {

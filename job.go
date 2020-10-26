@@ -152,8 +152,11 @@ func (s *Server) Jobs() []*Job {
 
 // Tick 添加一个新的定时任务
 func (s *Server) Tick(name string, f JobFunc, dur time.Duration, imm, delay bool) error {
-	s.New(name, f, ticker.New(dur, imm), delay)
-	return nil
+	scheduler, err := ticker.New(dur, imm)
+	if err == nil {
+		s.New(name, f, scheduler, delay)
+	}
+	return err
 }
 
 // Cron 使用 cron 表达式新建一个定时任务
@@ -161,12 +164,10 @@ func (s *Server) Tick(name string, f JobFunc, dur time.Duration, imm, delay bool
 // 具体文件可以参考 schedulers/cron.Parse
 func (s *Server) Cron(name string, f JobFunc, spec string, delay bool) error {
 	scheduler, err := cron.Parse(spec)
-	if err != nil {
-		return fmt.Errorf("解析参数 spec 出错：%s" + err.Error())
+	if err == nil {
+		s.New(name, f, scheduler, delay)
 	}
-
-	s.New(name, f, scheduler, delay)
-	return nil
+	return err
 }
 
 // At 添加 At 类型的定时器
@@ -174,11 +175,10 @@ func (s *Server) Cron(name string, f JobFunc, spec string, delay bool) error {
 // 具体文件可以参考 schedulers/at.At
 func (s *Server) At(name string, f JobFunc, t string, delay bool) error {
 	scheduler, err := at.At(t)
-	if err != nil {
-		return fmt.Errorf("解析参数 t 出错：%s" + err.Error())
+	if err == nil {
+		s.New(name, f, scheduler, delay)
 	}
-	s.New(name, f, scheduler, delay)
-	return nil
+	return err
 }
 
 // New 添加一个新的定时任务

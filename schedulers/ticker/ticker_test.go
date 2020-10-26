@@ -15,12 +15,11 @@ var _ schedulers.Scheduler = &ticker{}
 func TestTicker(t *testing.T) {
 	a := assert.New(t)
 
-	a.Panic(func() {
-		New(300*time.Microsecond, false)
-	})
+	s, err := New(300*time.Microsecond, false)
+	a.Error(err).Nil(s)
 
-	s := New(5*time.Minute, false)
-	a.NotNil(s)
+	s, err = New(5*time.Minute, false)
+	a.NotError(err).NotNil(s)
 
 	ticker, ok := s.(*ticker)
 	a.True(ok).Equal(ticker.title, s.Title())
@@ -38,8 +37,8 @@ func TestTicker(t *testing.T) {
 
 	// imm == false
 
-	s = New(5*time.Minute, true)
-	a.NotNil(s)
+	s, err = New(5*time.Minute, true)
+	a.NotError(err).NotNil(s)
 	now = time.Now()
 	next1 = s.Next(now)
 	a.Equal(next1.Unix(), now.Unix())
