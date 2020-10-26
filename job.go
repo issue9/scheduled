@@ -186,15 +186,19 @@ func (s *Server) At(name string, f JobFunc, t string, delay bool) error {
 // name 作为定时任务的一个简短描述，不作唯一要求；
 // delay 是否从任务执行完之后，才开始计算下个执行的时间点。
 func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler, delay bool) {
-	s.jobs = append(s.jobs, &Job{
+	job := &Job{
 		Scheduler: scheduler,
 		name:      name,
 		f:         f,
 		delay:     delay,
-	})
+	}
+	s.jobs = append(s.jobs, job)
 
 	// 服务已经运行，则需要触发调度任务。
-	if s.running && len(s.nextScheduled) == 0 {
-		s.nextScheduled <- struct{}{}
+	if s.running {
+		job.init(s.now())
+		if len(s.nextScheduled) == 0 {
+			s.nextScheduled <- struct{}{}
+		}
 	}
 }
