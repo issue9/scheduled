@@ -10,30 +10,35 @@ import (
 
 // Server 管理所有的定时任务
 type Server struct {
-	jobs []*Job
-
-	nextScheduled chan struct{} // 需要指行下一次调度任务
-
-	timer          *time.Timer
+	jobs           []*Job
+	nextScheduled  chan struct{} // 需要指行下一次调度任务
 	scheduleLocker sync.Mutex
+	timer          *time.Timer
 	stop           chan struct{}
-	loc            *time.Location
-	running        bool
+
+	loc             *time.Location
+	running         bool
+	errlog, infolog *log.Logger
 }
 
 // NewServer 声明 Server 对象实例
 //
-// loc 指定当前所采用的时区，若为 nil，则会采用 time.Local 的值。
-func NewServer(loc *time.Location) *Server {
+// loc 指定当前所采用的时区，若为 nil，则会采用 time.Local 的值；
+// errlog 定时任务的错误信息在此通道输出，若为空，则不输出；
+// infolog 如果不为空，则会输出一些额外的提示信息，方便调试。
+func NewServer(loc *time.Location, errlog, infolog *log.Logger) *Server {
 	if loc == nil {
 		loc = time.Local
 	}
 
 	return &Server{
 		jobs:          make([]*Job, 0, 100),
-		stop:          make(chan struct{}, 1),
 		nextScheduled: make(chan struct{}, 1),
-		loc:           loc,
+		stop:          make(chan struct{}, 1),
+
+		loc:     loc,
+		errlog:  errlog,
+		infolog: infolog,
 	}
 }
 
@@ -43,10 +48,7 @@ func (s *Server) Location() *time.Location {
 }
 
 // Serve 运行服务
-//
-// errlog 定时任务的错误信息在此通道输出，若为空，则不输出；
-// infolog 如果不为空，则会输出一些额外的提示信息，方便调试。
-func (s *Server) Serve(errlog, infolog *log.Logger) error {
+func (s *Server) Serve() error {
 	if s.running {
 		return ErrRunning
 	}
@@ -68,7 +70,7 @@ func (s *Server) Serve(errlog, infolog *log.Logger) error {
 		case <-s.stop:
 			return nil
 		case <-s.nextScheduled:
-			s.schedule(errlog, infolog)
+			s.schedule()
 		}
 	}
 }
@@ -79,7 +81,7 @@ func (s *Server) Serve(errlog, infolog *log.Logger) error {
 // 并重新生成一个最近时间的定时器。如果上一个定时器还未结束，
 // 则会自动结束上一个定时器，schedule 会保证同一时间，
 // 只有一个函数实例在运行。
-func (s *Server) schedule(errlog, infolog *log.Logger) {
+func (s *Server) schedule() {
 	if s.timer != nil {
 		s.timer.Stop() // 多次调用或是已过期，都不会 panic
 	}
@@ -119,7 +121,7 @@ func (s *Server) schedule(errlog, infolog *log.Logger) {
 		}
 
 		j.at = n
-		go j.run(errlog, infolog)
+		go j.run(s.errlog, s.infolog)
 	}
 	s.nextScheduled <- struct{}{}
 }

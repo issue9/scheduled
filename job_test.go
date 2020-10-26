@@ -157,7 +157,7 @@ func TestSortJobs(t *testing.T) {
 
 func TestServer_Jobs(t *testing.T) {
 	a := assert.New(t)
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 	a.NotNil(srv)
 
 	now := time.Now().Format(at.Layout)
@@ -172,7 +172,7 @@ func TestServer_Jobs(t *testing.T) {
 func TestServer_NewCron(t *testing.T) {
 	a := assert.New(t)
 
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 	a.NotError(srv.Cron("test", nil, "* * * 3-7 * *", false))
 	a.Error(srv.Cron("test", nil, "* * * 3-7a * *", false))
 }
