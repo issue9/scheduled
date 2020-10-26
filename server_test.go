@@ -39,16 +39,16 @@ func TestServer_Serve1(t *testing.T) {
 		return nil
 	}, time.Second, false, false))
 
-	a.NotError(srv.New("ticker2", func(t time.Time) error {
+	srv.New("ticker2", func(t time.Time) error {
 		atomic.AddInt64(&ticker2, 1)
 		return nil
-	}, &incr{}, false))
+	}, &incr{}, false)
 
 	go func() {
 		a.NotError(srv.Serve(nil, nil))
 	}()
 
-	<-time.NewTimer(6 * time.Second).C
+	time.Sleep(3 * time.Second)
 	srv.Stop()
 	a.True(ticker1 > ticker2, ticker1, ticker2)
 }
@@ -62,9 +62,10 @@ func TestServer_Serve(t *testing.T) {
 
 	a.NotError(srv.Tick("tick1", succFunc, 1*time.Second, false, false))
 	a.NotError(srv.Tick("tick2", erroFunc, 2*time.Second, false, false))
-	a.NotError(srv.Tick("delay", delayFunc, 1*time.Second, false, false))
 	go srv.Serve(nil, nil)
 	time.Sleep(3 * time.Second)
+	a.NotError(srv.Tick("delay", delayFunc, 1*time.Second, false, false))
+	time.Sleep(2 * time.Second)
 	srv.Stop()
 }
 

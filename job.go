@@ -152,7 +152,8 @@ func (s *Server) Jobs() []*Job {
 
 // Tick 添加一个新的定时任务
 func (s *Server) Tick(name string, f JobFunc, dur time.Duration, imm, delay bool) error {
-	return s.New(name, f, ticker.New(dur, imm), delay)
+	s.New(name, f, ticker.New(dur, imm), delay)
+	return nil
 }
 
 // Cron 使用 cron 表达式新建一个定时任务
@@ -164,7 +165,8 @@ func (s *Server) Cron(name string, f JobFunc, spec string, delay bool) error {
 		return fmt.Errorf("解析参数 spec 出错：%s" + err.Error())
 	}
 
-	return s.New(name, f, scheduler, delay)
+	s.New(name, f, scheduler, delay)
+	return nil
 }
 
 // At 添加 At 类型的定时器
@@ -175,23 +177,24 @@ func (s *Server) At(name string, f JobFunc, t string, delay bool) error {
 	if err != nil {
 		return fmt.Errorf("解析参数 t 出错：%s" + err.Error())
 	}
-	return s.New(name, f, scheduler, delay)
+	s.New(name, f, scheduler, delay)
+	return nil
 }
 
 // New 添加一个新的定时任务
 //
 // name 作为定时任务的一个简短描述，不作唯一要求；
 // delay 是否从任务执行完之后，才开始计算下个执行的时间点。
-func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler, delay bool) error {
-	if s.running {
-		return ErrRunning
-	}
-
+func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler, delay bool) {
 	s.jobs = append(s.jobs, &Job{
 		Scheduler: scheduler,
 		name:      name,
 		f:         f,
 		delay:     delay,
 	})
-	return nil
+
+	// 服务已经运行，则需要触发调度任务。
+	if s.running && len(s.nextScheduled) == 0 {
+		s.nextScheduled <- struct{}{}
+	}
 }
