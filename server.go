@@ -10,12 +10,9 @@ import (
 
 // Server 管理所有的定时任务
 type Server struct {
-	// 任务列表
-	// 调度算法会保证按执行时间顺序进行排序。
 	jobs []*Job
 
-	// 需要立马运行的任务
-	nextJob chan *Job
+	nextScheduled chan struct{} // 需要指行下一次调度任务
 
 	timer          *time.Timer
 	scheduleLocker sync.Mutex
@@ -33,10 +30,10 @@ func NewServer(loc *time.Location) *Server {
 	}
 
 	return &Server{
-		jobs:    make([]*Job, 0, 100),
-		stop:    make(chan struct{}, 1),
-		nextJob: make(chan *Job, 10),
-		loc:     loc,
+		jobs:          make([]*Job, 0, 100),
+		stop:          make(chan struct{}, 1),
+		nextScheduled: make(chan struct{}, 1),
+		loc:           loc,
 	}
 }
 
@@ -53,29 +50,25 @@ func (s *Server) Serve(errlog, infolog *log.Logger) error {
 	if s.running {
 		return ErrRunning
 	}
-	s.running = true
 
 	if len(s.jobs) == 0 {
-		s.running = false
 		return ErrNoJobs
 	}
+
+	s.running = true
 
 	now := s.now()
 	for _, job := range s.jobs {
 		job.init(now)
 	}
 
-	s.schedule()
-
+	s.nextScheduled <- struct{}{}
 	for {
 		select {
 		case <-s.stop:
 			return nil
-		case j := <-s.nextJob:
-			go func() {
-				j.run(errlog, infolog)
-				s.schedule()
-			}()
+		case <-s.nextScheduled:
+			s.schedule(errlog, infolog)
 		}
 	}
 }
@@ -86,7 +79,7 @@ func (s *Server) Serve(errlog, infolog *log.Logger) error {
 // 并重新生成一个最近时间的定时器。如果上一个定时器还未结束，
 // 则会自动结束上一个定时器，schedule 会保证同一时间，
 // 只有一个函数实例在运行。
-func (s *Server) schedule() {
+func (s *Server) schedule(errlog, infolog *log.Logger) {
 	if s.timer != nil {
 		s.timer.Stop() // 多次调用或是已过期，都不会 panic
 	}
@@ -94,10 +87,8 @@ func (s *Server) schedule() {
 	s.scheduleLocker.Lock()
 	defer s.scheduleLocker.Unlock()
 
-	sortJobs(s.jobs)
-
-	// 下一次计划任务执行的时间
-	next := s.jobs[0].next
+	sortJobs(s.jobs)       // 按执行时间进行排序
+	next := s.jobs[0].next // 最近需要执行的任务
 
 	if next.IsZero() { // 没有需要运行的任务
 		s.running = false
@@ -112,8 +103,7 @@ func (s *Server) schedule() {
 
 	s.timer = time.NewTimer(dur)
 
-	// s.timer 可能造成 schedule 函数的长时间等待
-	n, ok := <-s.timer.C
+	n, ok := <-s.timer.C // s.timer.C 可能造成 schedule 函数的长时间等待
 	if !ok {
 		return
 	}
@@ -123,13 +113,15 @@ func (s *Server) schedule() {
 			continue
 		}
 
+		// 因为是按执行顺序排序，如果当前任务不需要执行了，那之后的肯定也不需要
 		if j.next.IsZero() || j.next.After(n) {
-			return
+			break
 		}
 
 		j.at = n
-		s.nextJob <- j
+		go j.run(errlog, infolog)
 	}
+	s.nextScheduled <- struct{}{}
 }
 
 // Stop 停止当前服务

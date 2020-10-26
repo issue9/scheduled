@@ -50,7 +50,6 @@ func TestServer_Serve1(t *testing.T) {
 
 	<-time.NewTimer(6 * time.Second).C
 	srv.Stop()
-	println(ticker1, ticker2)
 	a.True(ticker1 > ticker2, ticker1, ticker2)
 }
 
