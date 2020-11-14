@@ -173,12 +173,9 @@ func (s *Server) Cron(name string, f JobFunc, spec string, delay bool) error {
 // At 添加 At 类型的定时器
 //
 // 具体文件可以参考 schedulers/at.At
-func (s *Server) At(name string, f JobFunc, t string, delay bool) error {
-	scheduler, err := at.At(t)
-	if err == nil {
-		s.New(name, f, scheduler, delay)
-	}
-	return err
+func (s *Server) At(name string, f JobFunc, t time.Time, delay bool) error {
+	s.New(name, f, at.At(t), delay)
+	return nil // 保持返回参数与其它函数相同
 }
 
 // New 添加一个新的定时任务

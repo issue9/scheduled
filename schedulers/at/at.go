@@ -9,10 +9,7 @@ import (
 	"github.com/issue9/scheduled/schedulers"
 )
 
-// Layout Parse 解析时间的格式
-//
-// 同时也是 Title 返回的格式。
-const Layout = "2006-01-02 15:04:05"
+const layout = "2006-01-02 15:04:05"
 
 var zero = time.Time{}
 
@@ -28,23 +25,11 @@ type scheduler struct {
 }
 
 // At 返回只在指定时间执行一次的调度器
-//
-// t 为一个正常的时间字符串，在该时间执行一次 f。若时间早于当前时间，
-// 则在启动之后立马执行，如果 t 的值为零，则不会被执行。
-func At(t string) (schedulers.Scheduler, error) {
-	tt, err := time.ParseInLocation(Layout, t, time.UTC)
-	if err != nil {
-		return nil, err
-	}
-
-	return at(tt), nil
-}
-
-func at(t time.Time) schedulers.Scheduler {
+func At(t time.Time) schedulers.Scheduler {
 	year, month, day := t.Date()
 	hour, minute, sec := t.Clock()
 	return &scheduler{
-		title:  t.Format(Layout),
+		title:  t.Format(layout),
 		year:   year,
 		month:  month,
 		day:    day,

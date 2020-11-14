@@ -138,7 +138,7 @@ func (s *Server) Stop() {
 		s.timer.Stop()
 	}
 
-	// NOTE: 不能通过关闭 nextJob 来结束 Server。
+	// NOTE: 不能通过关闭 nextScheduled 来结束 Server。
 	// 因为 schedule() 是异步执行的，
 	// 会源源不断地推内容到 nextJob，如果关闭，可能会造成 schedule() panic
 	s.stop <- struct{}{}

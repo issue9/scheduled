@@ -78,7 +78,7 @@ func Parse(spec string) (schedulers.Scheduler, error) {
 	case spec == "":
 		return nil, errors.New("参数 spec 不能为空")
 	case spec == "@reboot":
-		return at.At(time.Time{}.Format(at.Layout))
+		return at.At(time.Time{}), nil
 	case spec[0] == '@':
 		d, found := direct[spec]
 		if !found {

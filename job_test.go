@@ -12,7 +12,6 @@ import (
 	"github.com/issue9/assert"
 
 	"github.com/issue9/scheduled/schedulers"
-	"github.com/issue9/scheduled/schedulers/at"
 	"github.com/issue9/scheduled/schedulers/ticker"
 )
 
@@ -160,7 +159,7 @@ func TestServer_Jobs(t *testing.T) {
 	srv := NewServer(nil, nil, nil)
 	a.NotNil(srv)
 
-	now := time.Now().Format(at.Layout)
+	now := time.Now()
 	a.NotError(srv.At("j1", succFunc, now, false))
 	a.NotError(srv.At("j3", succFunc, now, false))
 	a.NotError(srv.At("j2", succFunc, now, false))

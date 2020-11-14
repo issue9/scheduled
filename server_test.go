@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/issue9/assert"
-
-	"github.com/issue9/scheduled/schedulers/at"
 )
 
 type incr struct {
@@ -85,8 +83,7 @@ func TestServer_Serve_loc(t *testing.T) {
 		return nil
 	}
 
-	now := time.Now().Format(at.Layout)
-	srv.At("xxx", job, now, false)
+	srv.At("xxx", job, time.Now(), false)
 	go srv.Serve()
 	time.Sleep(3 * time.Second)
 	a.Equal(0, buf.Len(), buf.String())
