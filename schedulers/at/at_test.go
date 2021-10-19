@@ -22,13 +22,16 @@ func TestAt(t *testing.T) {
 	s := At(tt)
 	a.NotNil(s)
 	a.True(s.Next(now).Before(now)).
-		Equal(s.Next(now), zero) // 多次获取，返回零值
+		True(s.Next(now).IsZero()) // 多次获取，返回零值
 
-	ttt, err := time.ParseInLocation(layout, tt.Format(layout), time.UTC)
+	ttt, err := time.ParseInLocation(layout, tt.Format(layout), time.UTC) // 擦除时区信息
 	a.NotError(err)
+
 	s = At(tt)
 	a.NotNil(s)
 	loc := time.FixedZone("UTC+8", 8*60*60)
 	next := s.Next(time.Now().In(loc)) // 变成 8 时区，小于零时区的 loc
 	a.True(next.Before(ttt))
 }
+
+const layout = "2006-01-02 15:04:05"
