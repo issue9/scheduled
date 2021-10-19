@@ -48,8 +48,6 @@ func (b bound) valid(v int) bool {
 	return v >= b.min && v <= b.max
 }
 
-// 第一个非零值
-
 // 获取 fields 中与 curr 最近的下一个值
 //
 // curr 当前的时间值；

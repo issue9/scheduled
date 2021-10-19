@@ -5,11 +5,11 @@ package cron
 import "time"
 
 type datetime struct {
-	year                  int
-	month                 time.Month
-	day                   int
-	weekday               time.Weekday
-	hour, minitue, second int
+	year                 int
+	month                time.Month
+	day                  int
+	weekday              time.Weekday
+	hour, minute, second int
 }
 
 func (c *cron) Next(last time.Time) time.Time {
@@ -17,11 +17,11 @@ func (c *cron) Next(last time.Time) time.Time {
 	dt.year, dt.month, dt.day = last.Date()
 	dt.weekday = last.Weekday()
 	dt.hour = last.Hour()
-	dt.minitue = last.Minute()
+	dt.minute = last.Minute()
 	dt.second = last.Second()
 
 	second, carry := c.data[secondIndex].next(dt.second, bounds[secondIndex], true)
-	minute, carry := c.data[minuteIndex].next(dt.minitue, bounds[minuteIndex], carry)
+	minute, carry := c.data[minuteIndex].next(dt.minute, bounds[minuteIndex], carry)
 	hour, carry := c.data[hourIndex].next(dt.hour, bounds[hourIndex], carry)
 
 	var year, month, day int
