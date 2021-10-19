@@ -17,7 +17,4 @@ type Scheduler interface {
 	//
 	// 传递相同的 last 参数，其返回值应该也相同，或是返回一个零值。
 	Next(last time.Time) time.Time
-
-	// Title 返回用于描述当前算法的一个简短介绍
-	Title() string
 }

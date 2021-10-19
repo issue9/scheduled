@@ -43,9 +43,7 @@ func NewServer(loc *time.Location, errlog, infolog *log.Logger) *Server {
 }
 
 // Location 返回当前任务相关联的时区信息
-func (s *Server) Location() *time.Location {
-	return s.loc
-}
+func (s *Server) Location() *time.Location { return s.loc }
 
 // Serve 运行服务
 func (s *Server) Serve() error {
@@ -144,6 +142,4 @@ func (s *Server) Stop() {
 	s.stop <- struct{}{}
 }
 
-func (s *Server) now() time.Time {
-	return time.Now().In(s.Location())
-}
+func (s *Server) now() time.Time { return time.Now().In(s.Location()) }

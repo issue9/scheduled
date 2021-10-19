@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/issue9/assert"
+
 	"github.com/issue9/scheduled/schedulers"
 )
 
@@ -20,9 +21,6 @@ func TestTicker(t *testing.T) {
 
 	s, err = New(5*time.Minute, false)
 	a.NotError(err).NotNil(s)
-
-	ticker, ok := s.(*ticker)
-	a.True(ok).Equal(ticker.title, s.Title())
 
 	now := time.Now()
 	next1 := s.Next(now)

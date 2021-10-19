@@ -37,13 +37,6 @@ var direct = map[string]string{
 type cron struct {
 	// 依次保存着 cron 语法中各个字段解析后的内容。
 	data []fields
-
-	title string
-}
-
-// Title 获取标题名称
-func (c *cron) Title() string {
-	return c.title
 }
 
 // Parse 根据 spec 初始化 schedulers.Scheduler
@@ -92,10 +85,7 @@ func Parse(spec string) (schedulers.Scheduler, error) {
 		return nil, errors.New("长度不正确")
 	}
 
-	c := &cron{
-		title: spec,
-		data:  make([]fields, indexSize),
-	}
+	c := &cron{data: make([]fields, indexSize)}
 
 	allAny := true // 是否所有字段都是 any
 	for i, field := range fs {

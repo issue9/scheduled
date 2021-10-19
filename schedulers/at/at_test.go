@@ -23,7 +23,6 @@ func TestAt(t *testing.T) {
 	a.NotNil(s)
 	a.True(s.Next(now).Before(now)).
 		Equal(s.Next(now), zero) // 多次获取，返回零值
-	a.Equal(s.Title(), tt.Format(layout))
 
 	ttt, err := time.ParseInLocation(layout, tt.Format(layout), time.UTC)
 	a.NotError(err)

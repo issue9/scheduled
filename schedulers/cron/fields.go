@@ -44,9 +44,7 @@ var bounds = []bound{
 
 type bound struct{ min, max int }
 
-func (b bound) valid(v int) bool {
-	return v >= b.min && v <= b.max
-}
+func (b bound) valid(v int) bool { return v >= b.min && v <= b.max }
 
 // 获取 fields 中与 curr 最近的下一个值
 //

@@ -99,7 +99,7 @@ func (j *Job) run(errlog, infolog *log.Logger) {
 		}
 	}()
 
-	// 第一条执行语句，保证最快的初始化状态为 Running
+	// 第一条执行语句，保证最快地初始化状态为 Running
 	j.state = Running
 
 	if infolog != nil {
@@ -122,9 +122,7 @@ func (j *Job) run(errlog, infolog *log.Logger) {
 }
 
 // 初始化当前任务，获取其下次执行时间。
-func (j *Job) init(now time.Time) {
-	j.next = j.Scheduler.Next(now)
-}
+func (j *Job) init(now time.Time) { j.next = j.Scheduler.Next(now) }
 
 func sortJobs(jobs []*Job) {
 	sort.SliceStable(jobs, func(i, j int) bool {
