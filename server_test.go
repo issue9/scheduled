@@ -81,14 +81,14 @@ func TestServer_Serve_loc(t *testing.T) {
 		return nil
 	}
 
-	now := time.Now()
+	now := time.Now().Add(2 * time.Second)
 	_, m, d := now.Date()
 	h, minute, s := now.Clock()
-	spec := fmt.Sprintf("%d %d %d %d %d *", s+2, minute, h, d, m)
+	spec := fmt.Sprintf("%d %d %d %d %d *", s, minute, h, d, m)
 
 	a.NotError(srv.Cron("cron", job, spec, false))
 	go srv.Serve()
-	time.Sleep(3 * time.Second)
+	time.Sleep(4 * time.Second) // 等待 4 秒
 	srv.Stop()
 	a.Equal(0, buf.Len(), buf.String())
 }

@@ -96,7 +96,7 @@ func (s *Server) schedule() {
 		return
 	}
 
-	dur := next.Sub(time.Now())
+	dur := time.Until(next)
 	if dur < 0 {
 		dur = 0
 	}
