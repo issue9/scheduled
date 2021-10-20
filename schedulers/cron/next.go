@@ -13,6 +13,8 @@ type datetime struct {
 }
 
 func (c *cron) Next(last time.Time) time.Time {
+	last = last.In(c.loc)
+
 	dt := &datetime{}
 	dt.year, dt.month, dt.day = last.Date()
 	dt.weekday = last.Weekday()

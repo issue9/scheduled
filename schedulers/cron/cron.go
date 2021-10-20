@@ -37,6 +37,7 @@ var direct = map[string]string{
 type cron struct {
 	// 依次保存着 cron 语法中各个字段解析后的内容。
 	data []fields
+	loc  *time.Location
 }
 
 // Parse 根据 spec 初始化 schedulers.Scheduler
@@ -66,7 +67,7 @@ type cron struct {
 //  @daily:    0 0 0 * * *
 //  @midnight: 0 0 0 * * *
 //  @hourly:   0 0 * * * *
-func Parse(spec string) (schedulers.Scheduler, error) {
+func Parse(spec string, loc *time.Location) (schedulers.Scheduler, error) {
 	switch {
 	case spec == "":
 		return nil, errors.New("参数 spec 不能为空")
@@ -85,7 +86,10 @@ func Parse(spec string) (schedulers.Scheduler, error) {
 		return nil, errors.New("长度不正确")
 	}
 
-	c := &cron{data: make([]fields, indexSize)}
+	c := &cron{
+		data: make([]fields, indexSize),
+		loc:  loc,
+	}
 
 	allAny := true // 是否所有字段都是 any
 	for i, field := range fs {

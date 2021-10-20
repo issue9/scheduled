@@ -57,7 +57,7 @@ func (s *Server) Serve() error {
 
 	s.running = true
 
-	now := s.now()
+	now := time.Now()
 	for _, job := range s.jobs {
 		job.init(now)
 	}
@@ -96,7 +96,7 @@ func (s *Server) schedule() {
 		return
 	}
 
-	dur := next.Sub(s.now())
+	dur := next.Sub(time.Now())
 	if dur < 0 {
 		dur = 0
 	}
@@ -141,5 +141,3 @@ func (s *Server) Stop() {
 	// 会源源不断地推内容到 nextJob，如果关闭，可能会造成 schedule() panic
 	s.stop <- struct{}{}
 }
-
-func (s *Server) now() time.Time { return time.Now().In(s.Location()) }

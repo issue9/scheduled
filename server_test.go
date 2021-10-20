@@ -4,6 +4,7 @@ package scheduled
 
 import (
 	"bytes"
+	"fmt"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -18,10 +19,6 @@ type incr struct {
 func (i *incr) Next(t time.Time) time.Time {
 	i.count += 2
 	return t.Add(i.count * time.Second)
-}
-
-func (i *incr) Title() string {
-	return "递增"
 }
 
 func TestServer_Serve1(t *testing.T) {
@@ -78,13 +75,20 @@ func TestServer_Serve_loc(t *testing.T) {
 	buf := new(bytes.Buffer)
 	a.Equal(0, buf.Len())
 	job := func(t time.Time) error {
+		buf.WriteString("job run at ")
 		buf.WriteString(t.String())
 		buf.WriteString("\n")
 		return nil
 	}
 
-	srv.At("xxx", job, time.Now(), false)
+	now := time.Now()
+	_, m, d := now.Date()
+	h, minute, s := now.Clock()
+	spec := fmt.Sprintf("%d %d %d %d %d *", s+2, minute, h, d, m)
+
+	a.NotError(srv.Cron("cron", job, spec, false))
 	go srv.Serve()
 	time.Sleep(3 * time.Second)
+	srv.Stop()
 	a.Equal(0, buf.Len(), buf.String())
 }

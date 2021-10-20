@@ -52,10 +52,10 @@ func TestJob_run(t *testing.T) {
 	}
 
 	j := &Job{
-		name:      "succ",
-		f:         succFunc,
-		Scheduler: newTickerJob(time.Second, false),
-		at:        now,
+		name: "succ",
+		f:    succFunc,
+		s:    newTickerJob(time.Second, false),
+		at:   now,
 	}
 	j.init(now)
 	j.run(nil, nil)
@@ -64,10 +64,10 @@ func TestJob_run(t *testing.T) {
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
 
 	j = &Job{
-		name:      "erro",
-		f:         erroFunc,
-		Scheduler: newTickerJob(time.Second, false),
-		at:        now,
+		name: "erro",
+		f:    erroFunc,
+		s:    newTickerJob(time.Second, false),
+		at:   now,
 	}
 	j.init(now)
 	j.run(errlog, nil)
@@ -76,10 +76,10 @@ func TestJob_run(t *testing.T) {
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
 
 	j = &Job{
-		name:      "fail",
-		f:         failFunc,
-		Scheduler: newTickerJob(time.Second, false),
-		at:        now,
+		name: "fail",
+		f:    failFunc,
+		s:    newTickerJob(time.Second, false),
+		at:   now,
 	}
 	j.init(now)
 	j.run(nil, nil)
@@ -89,11 +89,11 @@ func TestJob_run(t *testing.T) {
 
 	// delay == true
 	j = &Job{
-		name:      "delay=true",
-		f:         delayFunc,
-		Scheduler: newTickerJob(time.Second, false),
-		delay:     true,
-		at:        now,
+		name:  "delay=true",
+		f:     delayFunc,
+		s:     newTickerJob(time.Second, false),
+		delay: true,
+		at:    now,
 	}
 	j.init(now)
 	j.run(nil, nil)
@@ -103,11 +103,11 @@ func TestJob_run(t *testing.T) {
 
 	// delay == false
 	j = &Job{
-		name:      "delay=false",
-		f:         delayFunc,
-		Scheduler: newTickerJob(time.Second, false),
-		delay:     false,
-		at:        now,
+		name:  "delay=false",
+		f:     delayFunc,
+		s:     newTickerJob(time.Second, false),
+		delay: false,
+		at:    now,
 	}
 	j.init(now)
 	j.run(nil, nil)

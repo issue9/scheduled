@@ -5,6 +5,7 @@ package cron
 import (
 	"math"
 	"testing"
+	"time"
 
 	"github.com/issue9/assert"
 
@@ -95,7 +96,7 @@ func TestParse(t *testing.T) {
 	}
 
 	for _, v := range exprs {
-		s, err := Parse(v.expr)
+		s, err := Parse(v.expr, time.UTC)
 		if v.hasErr {
 			a.Error(err, "测试 %s 时出错", v.expr).
 				Nil(s)

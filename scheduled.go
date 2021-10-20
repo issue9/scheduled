@@ -18,3 +18,26 @@ var (
 	ErrNoJobs  = errors.New("任务列表为空")
 	ErrRunning = errors.New("任务已经在运行")
 )
+
+// 表示任务状态
+const (
+	Stopped State = iota
+	Running
+	Failed
+)
+
+// State 状态值类型
+type State int8
+
+func (s State) String() string {
+	switch s {
+	case Stopped:
+		return "stopped"
+	case Running:
+		return "running"
+	case Failed:
+		return "failed"
+	default:
+		return "<unknown>"
+	}
+}

@@ -23,5 +23,5 @@ func (s *scheduler) Next(last time.Time) time.Time {
 
 	ret := s.t
 	s.t = time.Time{}
-	return ret.In(last.Location())
+	return ret
 }

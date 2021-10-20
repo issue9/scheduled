@@ -175,7 +175,7 @@ func TestCron_Next(t *testing.T) {
 			panic(fmt.Sprintf("%d times 最少两个元素", i))
 		}
 
-		next, err := Parse(t.expr)
+		next, err := Parse(t.expr, time.UTC)
 		a.NotError(err).NotNil(next)
 
 		for j := 1; j < len(t.times); j++ {

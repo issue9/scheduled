@@ -33,7 +33,7 @@ func New(d time.Duration, imm bool) (schedulers.Scheduler, error) {
 func (t *ticker) Next(last time.Time) time.Time {
 	if t.imm {
 		t.imm = false
-		return time.Now().In(last.Location())
+		return time.Now()
 	}
 
 	return last.Add(t.dur)

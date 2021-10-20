@@ -14,22 +14,12 @@ import (
 	"github.com/issue9/scheduled/schedulers/ticker"
 )
 
-// 表示任务状态
-const (
-	Stopped State = iota
-	Running
-	Failed
-)
-
-// State 状态值类型
-type State int8
-
 // JobFunc 每一个定时任务实际上执行的函数签名
 type JobFunc func(time.Time) error
 
 // Job 一个定时任务的基本接口
 type Job struct {
-	schedulers.Scheduler
+	s schedulers.Scheduler
 
 	name  string
 	f     JobFunc
@@ -41,19 +31,6 @@ type Job struct {
 	// next 下一次可能执行的时间
 	// at 是由调度器在实际调用时的时间。
 	prev, next, at time.Time
-}
-
-func (s State) String() string {
-	switch s {
-	case Stopped:
-		return "stopped"
-	case Running:
-		return "running"
-	case Failed:
-		return "failed"
-	default:
-		return "<unknown>"
-	}
 }
 
 // Name 任务的名称
@@ -88,7 +65,7 @@ func (j *Job) run(errlog, infolog *log.Logger) {
 			if err, ok := msg.(error); ok {
 				j.err = err
 			} else {
-				j.err = fmt.Errorf("job %s error: %v", j.name, msg)
+				j.err = fmt.Errorf("%v", msg)
 			}
 
 			j.state = Failed
@@ -115,14 +92,14 @@ func (j *Job) run(errlog, infolog *log.Logger) {
 
 	j.prev = j.next
 	if j.Delay() {
-		j.next = j.Scheduler.Next(time.Now().In(j.at.Location()))
+		j.next = j.s.Next(time.Now())
 	} else {
-		j.next = j.Scheduler.Next(j.at)
+		j.next = j.s.Next(j.at)
 	}
 }
 
 // 初始化当前任务，获取其下次执行时间。
-func (j *Job) init(now time.Time) { j.next = j.Scheduler.Next(now) }
+func (j *Job) init(now time.Time) { j.next = j.s.Next(now) }
 
 func sortJobs(jobs []*Job) {
 	sort.SliceStable(jobs, func(i, j int) bool {
@@ -161,7 +138,7 @@ func (s *Server) Tick(name string, f JobFunc, dur time.Duration, imm, delay bool
 //
 // 具体文件可以参考 schedulers/cron.Parse
 func (s *Server) Cron(name string, f JobFunc, spec string, delay bool) error {
-	scheduler, err := cron.Parse(spec)
+	scheduler, err := cron.Parse(spec, s.Location())
 	if err == nil {
 		s.New(name, f, scheduler, delay)
 	}
@@ -182,16 +159,16 @@ func (s *Server) At(name string, f JobFunc, t time.Time, delay bool) error {
 // delay 是否从任务执行完之后，才开始计算下个执行的时间点。
 func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler, delay bool) {
 	job := &Job{
-		Scheduler: scheduler,
-		name:      name,
-		f:         f,
-		delay:     delay,
+		s:     scheduler,
+		name:  name,
+		f:     f,
+		delay: delay,
 	}
 	s.jobs = append(s.jobs, job)
 
 	// 服务已经运行，则需要触发调度任务。
 	if s.running {
-		job.init(s.now())
+		job.init(time.Now())
 		if len(s.nextScheduled) == 0 {
 			s.nextScheduled <- struct{}{}
 		}
