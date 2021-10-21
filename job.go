@@ -8,7 +8,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/issue9/scheduled/schedulers"
 	"github.com/issue9/scheduled/schedulers/at"
 	"github.com/issue9/scheduled/schedulers/cron"
 	"github.com/issue9/scheduled/schedulers/ticker"
@@ -19,7 +18,7 @@ type JobFunc func(time.Time) error
 
 // Job 一个定时任务的基本接口
 type Job struct {
-	s schedulers.Scheduler
+	s Scheduler
 
 	name  string
 	f     JobFunc
@@ -126,38 +125,33 @@ func (s *Server) Jobs() []*Job {
 }
 
 // Tick 添加一个新的定时任务
-func (s *Server) Tick(name string, f JobFunc, dur time.Duration, imm, delay bool) error {
-	scheduler, err := ticker.New(dur, imm)
-	if err == nil {
-		s.New(name, f, scheduler, delay)
-	}
-	return err
+func (s *Server) Tick(name string, f JobFunc, dur time.Duration, imm, delay bool) {
+	s.New(name, f, ticker.New(dur, imm), delay)
 }
 
 // Cron 使用 cron 表达式新建一个定时任务
 //
 // 具体文件可以参考 schedulers/cron.Parse
-func (s *Server) Cron(name string, f JobFunc, spec string, delay bool) error {
+func (s *Server) Cron(name string, f JobFunc, spec string, delay bool) {
 	scheduler, err := cron.Parse(spec, s.Location())
-	if err == nil {
-		s.New(name, f, scheduler, delay)
+	if err != nil {
+		panic(err)
 	}
-	return err
+	s.New(name, f, scheduler, delay)
 }
 
 // At 添加 At 类型的定时器
 //
 // 具体文件可以参考 schedulers/at.At
-func (s *Server) At(name string, f JobFunc, t time.Time, delay bool) error {
+func (s *Server) At(name string, f JobFunc, t time.Time, delay bool) {
 	s.New(name, f, at.At(t), delay)
-	return nil // 保持返回参数与其它函数相同
 }
 
 // New 添加一个新的定时任务
 //
 // name 作为定时任务的一个简短描述，不作唯一要求；
 // delay 是否从任务执行完之后，才开始计算下个执行的时间点。
-func (s *Server) New(name string, f JobFunc, scheduler schedulers.Scheduler, delay bool) {
+func (s *Server) New(name string, f JobFunc, scheduler Scheduler, delay bool) {
 	job := &Job{
 		s:     scheduler,
 		name:  name,

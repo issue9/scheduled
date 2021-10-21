@@ -11,7 +11,11 @@
 //  ticker 以固定的时间段执行任务，与 time.Ticker 相同。
 package scheduled
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/issue9/scheduled/schedulers"
+)
 
 // 一些错误的定义
 var (
@@ -25,6 +29,8 @@ const (
 	Running
 	Failed
 )
+
+type Scheduler = schedulers.Scheduler
 
 // State 状态值类型
 type State int8

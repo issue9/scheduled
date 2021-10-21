@@ -46,8 +46,8 @@ func TestJob_run(t *testing.T) {
 	now := time.Now()
 
 	newTickerJob := func(duration time.Duration, imm bool) schedulers.Scheduler {
-		s, err := ticker.New(duration, imm)
-		a.NotError(err).NotNil(s)
+		s := ticker.New(duration, imm)
+		a.NotNil(s)
 		return s
 	}
 
@@ -160,9 +160,9 @@ func TestServer_Jobs(t *testing.T) {
 	a.NotNil(srv)
 
 	now := time.Now()
-	a.NotError(srv.At("j1", succFunc, now, false))
-	a.NotError(srv.At("j3", succFunc, now, false))
-	a.NotError(srv.At("j2", succFunc, now, false))
+	srv.At("j1", succFunc, now, false)
+	srv.At("j3", succFunc, now, false)
+	srv.At("j2", succFunc, now, false)
 
 	jobs := srv.Jobs()
 	a.Equal(len(jobs), len(srv.jobs))
@@ -172,6 +172,8 @@ func TestServer_NewCron(t *testing.T) {
 	a := assert.New(t)
 
 	srv := NewServer(nil, nil, nil)
-	a.NotError(srv.Cron("test", nil, "* * * 3-7 * *", false))
-	a.Error(srv.Cron("test", nil, "* * * 3-7a * *", false))
+	srv.Cron("test", nil, "* * * 3-7 * *", false)
+	a.Panic(func() {
+		srv.Cron("test", nil, "* * * 3-7a * *", false)
+	})
 }

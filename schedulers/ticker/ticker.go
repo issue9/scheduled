@@ -4,7 +4,6 @@
 package ticker
 
 import (
-	"errors"
 	"time"
 
 	"github.com/issue9/scheduled/schedulers"
@@ -19,15 +18,12 @@ type ticker struct {
 //
 // imm 是否立即执行一次任务，如果为 true，
 // 则会在第一次调用 Next 时返回当前时间。
-func New(d time.Duration, imm bool) (schedulers.Scheduler, error) {
+func New(d time.Duration, imm bool) schedulers.Scheduler {
 	if d < time.Second {
-		return nil, errors.New("参数 d 的值必须在 1 秒以上")
+		panic("参数 d 的值必须在 1 秒以上")
 	}
 
-	return &ticker{
-		dur: d,
-		imm: imm,
-	}, nil
+	return &ticker{dur: d, imm: imm}
 }
 
 func (t *ticker) Next(last time.Time) time.Time {

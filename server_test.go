@@ -5,7 +5,6 @@ package scheduled
 import (
 	"bytes"
 	"fmt"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,7 +20,7 @@ func (i *incr) Next(t time.Time) time.Time {
 	return t.Add(i.count * time.Second)
 }
 
-func TestServer_Serve1(t *testing.T) {
+func TestServer_Serve_delay(t *testing.T) {
 	a := assert.New(t)
 	srv := NewServer(nil, nil, nil)
 	a.NotNil(srv)
@@ -29,15 +28,15 @@ func TestServer_Serve1(t *testing.T) {
 	var ticker1 int64
 	var ticker2 int64
 
-	a.NotError(srv.Tick("ticker1", func(t time.Time) error {
-		atomic.AddInt64(&ticker1, 1)
+	srv.Tick("ticker1", func(t time.Time) error {
+		ticker1++
 		return nil
-	}, time.Second, false, false))
+	}, time.Second, false, true)
 
 	srv.New("ticker2", func(t time.Time) error {
-		atomic.AddInt64(&ticker2, 1)
+		ticker2++
 		return nil
-	}, &incr{}, false)
+	}, &incr{}, true)
 
 	go func() {
 		a.NotError(srv.Serve())
@@ -46,6 +45,7 @@ func TestServer_Serve1(t *testing.T) {
 	time.Sleep(3 * time.Second)
 	srv.Stop()
 	a.True(ticker1 > ticker2, ticker1, ticker2)
+	fmt.Println("ticker times:", ticker1, ticker2)
 }
 
 func TestServer_Serve(t *testing.T) {
@@ -55,11 +55,11 @@ func TestServer_Serve(t *testing.T) {
 	a.Empty(srv.jobs).
 		Equal(srv.Serve(), ErrNoJobs)
 
-	a.NotError(srv.Tick("tick1", succFunc, 1*time.Second, false, false))
-	a.NotError(srv.Tick("tick2", erroFunc, 2*time.Second, false, false))
+	srv.Tick("tick1", succFunc, 1*time.Second, false, false)
+	srv.Tick("tick2", erroFunc, 2*time.Second, false, false)
 	go srv.Serve()
 	time.Sleep(3 * time.Second)
-	a.NotError(srv.Tick("delay", delayFunc, 1*time.Second, false, false))
+	srv.Tick("delay", delayFunc, 1*time.Second, false, false)
 	time.Sleep(2 * time.Second)
 	srv.Stop()
 }
@@ -86,7 +86,7 @@ func TestServer_Serve_loc(t *testing.T) {
 	h, minute, s := now.Clock()
 	spec := fmt.Sprintf("%d %d %d %d %d *", s, minute, h, d, m)
 
-	a.NotError(srv.Cron("cron", job, spec, false))
+	srv.Cron("cron", job, spec, false)
 	go srv.Serve()
 	time.Sleep(4 * time.Second) // 等待 4 秒
 	srv.Stop()

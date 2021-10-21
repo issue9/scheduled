@@ -16,11 +16,12 @@ var _ schedulers.Scheduler = &ticker{}
 func TestTicker(t *testing.T) {
 	a := assert.New(t)
 
-	s, err := New(300*time.Microsecond, false)
-	a.Error(err).Nil(s)
+	a.PanicString(func() {
+		New(300*time.Microsecond, false)
+	}, "参数 d 的值必须在 1 秒以上")
 
-	s, err = New(5*time.Minute, false)
-	a.NotError(err).NotNil(s)
+	s := New(5*time.Minute, false)
+	a.NotNil(s)
 
 	now := time.Now()
 	next1 := s.Next(now)
@@ -35,8 +36,8 @@ func TestTicker(t *testing.T) {
 
 	// imm == false
 
-	s, err = New(5*time.Minute, true)
-	a.NotError(err).NotNil(s)
+	s = New(5*time.Minute, true)
+	a.NotNil(s)
 	now = time.Now()
 	next1 = s.Next(now)
 	a.Equal(next1.Unix(), now.Unix())
