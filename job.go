@@ -163,6 +163,8 @@ func (s *Server) New(name string, f JobFunc, scheduler Scheduler, delay bool) {
 	// 服务已经运行，则需要触发调度任务。
 	if s.running {
 		job.init(time.Now())
+
 		s.sendNextScheduled()
+		s.exitTimer <- struct{}{}
 	}
 }

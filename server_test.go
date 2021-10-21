@@ -66,12 +66,79 @@ func TestServer_Serve(t *testing.T) {
 	}
 }
 
+// 初始为空，运行 Serve 之后动态添加任务
 func TestServer_Serve_empty(t *testing.T) {
 	a := assert.New(t)
 	srv := NewServer(nil, nil, nil)
 	a.NotNil(srv)
-	a.Empty(srv.jobs).
-		Equal(srv.Serve(), ErrNoJobs)
+	a.Empty(srv.jobs)
+
+	go func() {
+		a.NotError(srv.Serve())
+	}()
+	time.Sleep(500 * time.Millisecond) // 等待 srv.Serve
+	a.True(srv.running)
+
+	tickers1 := make([]time.Time, 0, 20)
+
+	srv.Tick("empty-ticker1", func(t time.Time) error {
+		tickers1 = append(tickers1, t)
+		println("empty-ticker1", t.String())
+		return nil
+	}, time.Second, true, false)
+
+	time.Sleep(5 * time.Second)
+	srv.Stop()
+
+	a.NotEmpty(tickers1)
+	for i := 1; i < len(tickers1); i++ {
+		prev := tickers1[i-1].Unix()
+		curr := tickers1[i].Unix()
+		a.Equal(prev+1, curr, "%v != %v", prev, curr)
+	}
+}
+
+type zero struct{}
+
+func (z zero) Next(time.Time) time.Time { return time.Time{} }
+
+// 初始为空，运行 Serve 之后动态添加任务
+func TestServer_Serve_zero(t *testing.T) {
+	a := assert.New(t)
+	srv := NewServer(nil, nil, nil)
+	a.NotNil(srv)
+
+	tickers1 := make([]time.Time, 0, 20)
+	tickers2 := make([]time.Time, 0, 20)
+
+	srv.New("zero-ticker1", func(t time.Time) error {
+		println("zero-ticker1", t.String())
+		return nil
+	}, zero{}, false)
+	a.Equal(len(srv.Jobs()), 1)
+
+	go func() {
+		a.NotError(srv.Serve())
+	}()
+	time.Sleep(500 * time.Millisecond) // 等待 srv.Serve
+	a.True(srv.running)
+
+	srv.Tick("zero-ticker2", func(t time.Time) error {
+		tickers2 = append(tickers2, t)
+		println("zero-ticker2", t.String())
+		return nil
+	}, time.Second, true, false)
+
+	time.Sleep(5 * time.Second)
+	srv.Stop()
+
+	a.Empty(tickers1)
+	a.NotEmpty(tickers2)
+	for i := 1; i < len(tickers1); i++ {
+		prev := tickers2[i-1].Unix()
+		curr := tickers2[i].Unix()
+		a.Equal(prev+1, curr, "%v != %v", prev, curr)
+	}
 }
 
 func TestServer_Serve_loc(t *testing.T) {

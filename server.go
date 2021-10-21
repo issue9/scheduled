@@ -12,10 +12,9 @@ import (
 type Server struct {
 	jobs           []*Job
 	nextScheduled  chan struct{} // 需要指行下一次调度任务
+	exitTimer      chan struct{}
 	scheduleLocker sync.Mutex
 	stop           chan struct{}
-	timer          *time.Timer
-	timerDur       time.Duration
 
 	loc             *time.Location
 	running         bool
@@ -35,8 +34,8 @@ func NewServer(loc *time.Location, errlog, infolog *log.Logger) *Server {
 	return &Server{
 		jobs:          make([]*Job, 0, 100),
 		nextScheduled: make(chan struct{}, 1),
+		exitTimer:     make(chan struct{}, 1),
 		stop:          make(chan struct{}, 1),
-		timer:         time.NewTimer(time.Second),
 
 		loc:     loc,
 		errlog:  errlog,
@@ -53,12 +52,9 @@ func (s *Server) Serve() error {
 		return ErrRunning
 	}
 
-	if len(s.jobs) == 0 {
-		return ErrNoJobs
-	}
-
 	s.running = true
 
+	// 初始化任务
 	now := time.Now()
 	for _, job := range s.jobs {
 		job.init(now)
@@ -94,29 +90,37 @@ func (s *Server) schedule() {
 
 	sortJobs(s.jobs) // 按执行时间进行排序
 
+	var dur time.Duration
+
+	if len(s.jobs) == 0 || s.jobs[0].next.IsZero() {
+		dur = time.Minute
+	} else {
+		dur = time.Until(s.jobs[0].next)
+	}
+
+	// dur >0 表示没有需要立即执行的，根据最早的一条任务做一个计时器。
+	if dur > 0 {
+		timer := time.NewTimer(dur)
+		for {
+			select {
+			case <-timer.C:
+				s.sendNextScheduled()
+				return
+			case <-s.exitTimer:
+				s.sendNextScheduled()
+				return
+			}
+		}
+	}
+
 	now := time.Now()
 	for _, j := range s.jobs {
+		if j.next.After(now) {
+			break
+		}
+
 		if j.State() == Running && j.Delay() { // 上一次任务还没结束，且是 delay 模式，则跳过此次任务
 			continue
-		}
-
-		if j.next.IsZero() { // 没有任务可用的任务，退出，且不用主动触发 nextScheduled。
-			return
-		}
-
-		// 因为是按执行顺序排序，如果当前任务还不能执行，那之后的肯定也不行，
-		// 此时创建一个 timer，等待时间满足需求，再触发 nextScheduled。
-		if dur := time.Until(j.next); dur > 0 {
-			if dur < s.timerDur || s.timerDur == 0 {
-				s.timer.Stop()
-				s.timer = time.NewTimer(dur) // 保存为全局变量，防止多次调用 schedule 生成多个 timer
-				s.timerDur = dur
-				<-s.timer.C
-
-				s.sendNextScheduled()
-			}
-
-			return
 		}
 
 		j.calcState() // 计算关键信息
@@ -133,9 +137,6 @@ func (s *Server) Stop() {
 	}
 
 	s.running = false
-
-	s.timer.Stop()
-	s.timerDur = 0
 
 	// NOTE: 不能通过关闭 nextScheduled 来结束 Server。
 	// 因为 schedule() 是异步执行的，
