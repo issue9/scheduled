@@ -16,12 +16,15 @@ var _ schedulers.Scheduler = &scheduler{}
 func TestAt(t *testing.T) {
 	a := assert.New(t)
 
-	// 早于当前时间
 	now := time.Now()
-	tt := now.Add(-time.Hour)
 
-	s := At(tt)
+	s := At(now.Add(-time.Hour))
 	a.NotNil(s)
 	a.True(s.Next(now).Before(now)).
+		True(s.Next(now).IsZero()) // 多次获取，返回零值
+
+	s = At(now.Add(time.Hour))
+	a.NotNil(s)
+	a.True(s.Next(now).After(now)).
 		True(s.Next(now).IsZero()) // 多次获取，返回零值
 }

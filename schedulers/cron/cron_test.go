@@ -24,6 +24,16 @@ func pow2(y ...uint64) fields {
 	return fields(p)
 }
 
+func TestReboot(t *testing.T) {
+	a := assert.New(t)
+
+	s, err := Parse("@reboot", time.Local)
+	a.NotError(err).NotNil(s)
+	a.False(s.Next(time.Now()).IsZero()).
+		True(s.Next(time.Now()).IsZero()).
+		True(s.Next(time.Now()).IsZero())
+}
+
 func TestParse(t *testing.T) {
 	a := assert.New(t)
 

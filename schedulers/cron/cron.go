@@ -42,7 +42,9 @@ type cron struct {
 
 // Parse 根据 spec 初始化 schedulers.Scheduler
 //
-// spec 的格式如下：
+// spec 表示 crontab 的格式
+//
+// 区分大小写，支持秒，其格式如下：
 //  * * * * * *
 //  | | | | | |
 //  | | | | | --- 星期
@@ -72,7 +74,7 @@ func Parse(spec string, loc *time.Location) (schedulers.Scheduler, error) {
 	case spec == "":
 		return nil, errors.New("参数 spec 不能为空")
 	case spec == "@reboot":
-		return at.At(time.Time{}), nil
+		return at.At(time.Now()), nil
 	case spec[0] == '@':
 		d, found := direct[spec]
 		if !found {
