@@ -14,6 +14,8 @@ type Server struct {
 	nextScheduled  chan struct{} // 需要指行下一次调度任务
 	scheduleLocker sync.Mutex
 	stop           chan struct{}
+	timer          *time.Timer
+	timerDur       time.Duration
 
 	loc             *time.Location
 	running         bool
@@ -34,6 +36,7 @@ func NewServer(loc *time.Location, errlog, infolog *log.Logger) *Server {
 		jobs:          make([]*Job, 0, 100),
 		nextScheduled: make(chan struct{}, 1),
 		stop:          make(chan struct{}, 1),
+		timer:         time.NewTimer(time.Second),
 
 		loc:     loc,
 		errlog:  errlog,
@@ -61,7 +64,8 @@ func (s *Server) Serve() error {
 		job.init(now)
 	}
 
-	s.nextScheduled <- struct{}{}
+	s.sendNextScheduled()
+
 	for {
 		select {
 		case <-s.stop:
@@ -69,6 +73,12 @@ func (s *Server) Serve() error {
 		case <-s.nextScheduled:
 			s.schedule()
 		}
+	}
+}
+
+func (s *Server) sendNextScheduled() {
+	if len(s.nextScheduled) == 0 {
+		s.nextScheduled <- struct{}{}
 	}
 }
 
@@ -82,18 +92,7 @@ func (s *Server) schedule() {
 	s.scheduleLocker.Lock()
 	defer s.scheduleLocker.Unlock()
 
-	sortJobs(s.jobs)       // 按执行时间进行排序
-	next := s.jobs[0].next // 最近需要执行的任务
-
-	if next.IsZero() { // 没有需要运行的任务
-		s.running = false
-		s.Stop()
-		return
-	}
-
-	if dur := time.Until(next); dur > 0 {
-		<-time.NewTimer(dur).C // timer.C 可能造成 schedule 函数的长时间等待
-	}
+	sortJobs(s.jobs) // 按执行时间进行排序
 
 	now := time.Now()
 	for _, j := range s.jobs {
@@ -101,15 +100,30 @@ func (s *Server) schedule() {
 			continue
 		}
 
-		// 因为是按执行顺序排序，如果当前任务不需要执行了，那之后的肯定也不需要
-		if j.next.IsZero() || j.next.After(now) {
-			break
+		if j.next.IsZero() { // 没有任务可用的任务，退出，且不用主动触发 nextScheduled。
+			return
 		}
 
-		j.at = now
-		go j.run(s.errlog, s.infolog)
+		// 因为是按执行顺序排序，如果当前任务还不能执行，那之后的肯定也不行，
+		// 此时创建一个 timer，等待时间满足需求，再触发 nextScheduled。
+		if dur := time.Until(j.next); dur > 0 {
+			if dur < s.timerDur || s.timerDur == 0 {
+				s.timer.Stop()
+				s.timer = time.NewTimer(dur) // 保存为全局变量，防止多次调用 schedule 生成多个 timer
+				s.timerDur = dur
+				<-s.timer.C
+
+				s.sendNextScheduled()
+			}
+
+			return
+		}
+
+		j.calcState() // 计算关键信息
+		go j.run(now, s.errlog, s.infolog)
 	}
-	s.nextScheduled <- struct{}{}
+
+	s.sendNextScheduled()
 }
 
 // Stop 停止当前服务
@@ -119,6 +133,9 @@ func (s *Server) Stop() {
 	}
 
 	s.running = false
+
+	s.timer.Stop()
+	s.timerDur = 0
 
 	// NOTE: 不能通过关闭 nextScheduled 来结束 Server。
 	// 因为 schedule() 是异步执行的，

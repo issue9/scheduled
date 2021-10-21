@@ -29,7 +29,7 @@ type Job struct {
 	// prev 上次实际上执行的时间
 	// next 下一次可能执行的时间
 	// at 是由调度器在实际调用时的时间。
-	prev, next, at time.Time
+	prev, next time.Time
 }
 
 // Name 任务的名称
@@ -55,10 +55,18 @@ func (j *Job) Err() error { return j.err }
 // 即从任务执行完成的时间点计算下一次执行时间。
 func (j *Job) Delay() bool { return j.delay }
 
+// goroutine 启动需要时间，短时间任务，可能存在 goroutine 未初始化完成，
+// 第二次调用已经开始，所以此处先初始化相关的状态信息，使第二次调用处理非法状态。
+func (j *Job) calcState() {
+	j.state = Running
+	j.prev = j.next
+	j.next = j.s.Next(time.Now()) // 先计算 next，保证调用者重复调用 run 时能获取正确的 next。
+}
+
 // 运行当前的任务
 //
 // errlog 在出错时，日志的输出通道，可以为空，表示不输出。
-func (j *Job) run(errlog, infolog *log.Logger) {
+func (j *Job) run(at time.Time, errlog, infolog *log.Logger) {
 	defer func() {
 		if msg := recover(); msg != nil {
 			if err, ok := msg.(error); ok {
@@ -75,22 +83,18 @@ func (j *Job) run(errlog, infolog *log.Logger) {
 		}
 	}()
 
-	// 第一条执行语句，保证最快地初始化状态为 Running
-	j.state = Running
-
 	if infolog != nil {
-		infolog.Printf("scheduled: start job %s at %s\n", j.Name(), j.at.String())
+		infolog.Printf("scheduled: start job %s at %s\n", j.Name(), at.String())
 	}
 
-	j.err = j.f(j.at)
+	j.err = j.f(at)
 	if j.err != nil {
 		j.state = Failed
 	} else {
 		j.state = Stopped
 	}
 
-	j.prev = j.next
-	j.next = j.s.Next(time.Now())
+	j.next = j.s.Next(time.Now()) // j.f 可能会花费大量时间，重新计算 next
 }
 
 // 初始化当前任务，获取其下次执行时间。
@@ -159,8 +163,6 @@ func (s *Server) New(name string, f JobFunc, scheduler Scheduler, delay bool) {
 	// 服务已经运行，则需要触发调度任务。
 	if s.running {
 		job.init(time.Now())
-		if len(s.nextScheduled) == 0 {
-			s.nextScheduled <- struct{}{}
-		}
+		s.sendNextScheduled()
 	}
 }

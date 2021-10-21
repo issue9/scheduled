@@ -11,57 +11,67 @@ import (
 	"github.com/issue9/assert"
 )
 
-type incr struct {
-	count time.Duration
-}
-
-func (i *incr) Next(t time.Time) time.Time {
-	i.count += 2
-	return t.Add(i.count * time.Second)
-}
-
-func TestServer_Serve_delay(t *testing.T) {
+func TestServer_Serve(t *testing.T) {
 	a := assert.New(t)
 	srv := NewServer(nil, nil, nil)
 	a.NotNil(srv)
 
-	var ticker1 int64
-	var ticker2 int64
+	tickers1 := make([]time.Time, 0, 20)
+	tickers2 := make([]time.Time, 0, 20)
+	tickers3 := make([]time.Time, 0, 20)
 
 	srv.Tick("ticker1", func(t time.Time) error {
-		ticker1++
+		tickers1 = append(tickers1, t)
+		println("ticker1", t.String())
 		return nil
 	}, time.Second, false, true)
 
-	srv.New("ticker2", func(t time.Time) error {
-		ticker2++
+	srv.Tick("ticker2", func(t time.Time) error {
+		tickers2 = append(tickers2, t)
+		println("ticker2", t.String())
 		return nil
-	}, &incr{}, true)
+	}, 2*time.Second, false, true)
+
+	srv.Tick("ticker3", func(t time.Time) error {
+		tickers3 = append(tickers3, t)
+		println("ticker3-imm", t.String())
+		return nil
+	}, 2*time.Second, true, true)
 
 	go func() {
 		a.NotError(srv.Serve())
 	}()
-
-	time.Sleep(3 * time.Second)
+	time.Sleep(5 * time.Second)
 	srv.Stop()
-	a.True(ticker1 > ticker2, ticker1, ticker2)
-	fmt.Println("ticker times:", ticker1, ticker2)
+
+	a.NotEmpty(tickers1)
+	for i := 1; i < len(tickers1); i++ {
+		prev := tickers1[i-1].Unix()
+		curr := tickers1[i].Unix()
+		a.Equal(prev+1, curr, "%v != %v", prev, curr)
+	}
+
+	a.NotEmpty(tickers2)
+	for i := 1; i < len(tickers2); i++ {
+		prev := tickers2[i-1].Unix()
+		curr := tickers2[i].Unix()
+		a.Equal(prev+2, curr, "%v != %v", prev, curr)
+	}
+
+	a.NotEmpty(tickers3)
+	for i := 1; i < len(tickers3); i++ {
+		prev := tickers3[i-1].Unix()
+		curr := tickers3[i].Unix()
+		a.Equal(prev+2, curr, "%v != %v", prev, curr)
+	}
 }
 
-func TestServer_Serve(t *testing.T) {
+func TestServer_Serve_empty(t *testing.T) {
 	a := assert.New(t)
 	srv := NewServer(nil, nil, nil)
 	a.NotNil(srv)
 	a.Empty(srv.jobs).
 		Equal(srv.Serve(), ErrNoJobs)
-
-	srv.Tick("tick1", succFunc, 1*time.Second, false, false)
-	srv.Tick("tick2", erroFunc, 2*time.Second, false, false)
-	go srv.Serve()
-	time.Sleep(3 * time.Second)
-	srv.Tick("delay", delayFunc, 1*time.Second, false, false)
-	time.Sleep(2 * time.Second)
-	srv.Stop()
 }
 
 func TestServer_Serve_loc(t *testing.T) {
