@@ -35,7 +35,7 @@ var direct = map[string]string{
 }
 
 type cron struct {
-	// 依次保存着 cron 语法中各个字段解析后的内容。
+	// 依次保存着 cron 语法中各个字段解析后的内容
 	data []fields
 	loc  *time.Location
 }
