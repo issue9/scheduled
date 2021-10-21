@@ -13,7 +13,6 @@ type Server struct {
 	jobs           []*Job
 	nextScheduled  chan struct{} // 需要指行下一次调度任务
 	scheduleLocker sync.Mutex
-	timer          *time.Timer
 	stop           chan struct{}
 
 	loc             *time.Location
@@ -80,10 +79,6 @@ func (s *Server) Serve() error {
 // 则会自动结束上一个定时器，schedule 会保证同一时间，
 // 只有一个函数实例在运行。
 func (s *Server) schedule() {
-	if s.timer != nil {
-		s.timer.Stop() // 多次调用或是已过期，都不会 panic
-	}
-
 	s.scheduleLocker.Lock()
 	defer s.scheduleLocker.Unlock()
 
@@ -96,29 +91,22 @@ func (s *Server) schedule() {
 		return
 	}
 
-	dur := time.Until(next)
-	if dur < 0 {
-		dur = 0
+	if dur := time.Until(next); dur > 0 {
+		<-time.NewTimer(dur).C // timer.C 可能造成 schedule 函数的长时间等待
 	}
 
-	s.timer = time.NewTimer(dur)
-
-	n, ok := <-s.timer.C // s.timer.C 可能造成 schedule 函数的长时间等待
-	if !ok {
-		return
-	}
-
+	now := time.Now()
 	for _, j := range s.jobs {
-		if j.State() == Running { // 上一次任务还没结束，则跳过该任务
+		if j.State() == Running && j.Delay() { // 上一次任务还没结束，且是 delay 模式，则跳过此次任务
 			continue
 		}
 
 		// 因为是按执行顺序排序，如果当前任务不需要执行了，那之后的肯定也不需要
-		if j.next.IsZero() || j.next.After(n) {
+		if j.next.IsZero() || j.next.After(now) {
 			break
 		}
 
-		j.at = n
+		j.at = now
 		go j.run(s.errlog, s.infolog)
 	}
 	s.nextScheduled <- struct{}{}
@@ -131,10 +119,6 @@ func (s *Server) Stop() {
 	}
 
 	s.running = false
-
-	if s.timer != nil {
-		s.timer.Stop()
-	}
 
 	// NOTE: 不能通过关闭 nextScheduled 来结束 Server。
 	// 因为 schedule() 是异步执行的，

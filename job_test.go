@@ -43,7 +43,6 @@ var (
 
 func TestJob_run(t *testing.T) {
 	a := assert.New(t)
-	now := time.Now()
 
 	newTickerJob := func(duration time.Duration, imm bool) schedulers.Scheduler {
 		s := ticker.New(duration, imm)
@@ -51,6 +50,7 @@ func TestJob_run(t *testing.T) {
 		return s
 	}
 
+	now := time.Now()
 	j := &Job{
 		name: "succ",
 		f:    succFunc,
@@ -63,6 +63,7 @@ func TestJob_run(t *testing.T) {
 		Equal(j.State(), Stopped).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
 
+	now = time.Now()
 	j = &Job{
 		name: "erro",
 		f:    erroFunc,
@@ -75,6 +76,7 @@ func TestJob_run(t *testing.T) {
 		Equal(j.State(), Failed).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
 
+	now = time.Now()
 	j = &Job{
 		name: "fail",
 		f:    failFunc,
@@ -88,6 +90,7 @@ func TestJob_run(t *testing.T) {
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
 
 	// delay == true
+	now = time.Now()
 	j = &Job{
 		name:  "delay=true",
 		f:     delayFunc,
@@ -102,6 +105,7 @@ func TestJob_run(t *testing.T) {
 		Equal(j.Next().Unix(), now.Add(3*time.Second).Unix()) // delayFunc 延时两秒
 
 	// delay == false
+	now = time.Now()
 	j = &Job{
 		name:  "delay=false",
 		f:     delayFunc,
@@ -113,7 +117,7 @@ func TestJob_run(t *testing.T) {
 	j.run(nil, nil)
 	a.Nil(j.Err()).
 		Equal(j.State(), Stopped).
-		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
+		Equal(j.Next().Unix(), now.Add(3*time.Second).Unix())
 }
 
 func TestSortJobs(t *testing.T) {
@@ -140,11 +144,6 @@ func TestSortJobs(t *testing.T) {
 		{
 			name: "5",
 			next: now.Add(222),
-		},
-		{
-			name:  "6",
-			next:  now,
-			state: Running, // Running 状态，放在最后
 		},
 	}
 

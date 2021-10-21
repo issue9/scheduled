@@ -90,11 +90,7 @@ func (j *Job) run(errlog, infolog *log.Logger) {
 	}
 
 	j.prev = j.next
-	if j.Delay() {
-		j.next = j.s.Next(time.Now())
-	} else {
-		j.next = j.s.Next(j.at)
-	}
+	j.next = j.s.Next(time.Now())
 }
 
 // 初始化当前任务，获取其下次执行时间。
@@ -102,10 +98,10 @@ func (j *Job) init(now time.Time) { j.next = j.s.Next(now) }
 
 func sortJobs(jobs []*Job) {
 	sort.SliceStable(jobs, func(i, j int) bool {
-		if jobs[i].next.IsZero() || jobs[i].State() == Running {
+		if jobs[i].next.IsZero() {
 			return false
 		}
-		if jobs[j].next.IsZero() || jobs[j].State() == Running {
+		if jobs[j].next.IsZero() {
 			return true
 		}
 		return jobs[i].next.Before(jobs[j].next)
