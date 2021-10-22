@@ -76,7 +76,7 @@ func (j *Job) run(at time.Time, errlog, infolog *log.Logger) {
 
 			j.state = Failed
 
-			if errlog != nil && j.err != nil {
+			if errlog != nil {
 				errlog.Println(j.err)
 			}
 		}
@@ -89,6 +89,10 @@ func (j *Job) run(at time.Time, errlog, infolog *log.Logger) {
 	j.err = j.f(at)
 	if j.err != nil {
 		j.state = Failed
+
+		if errlog != nil {
+			errlog.Println(j.err)
+		}
 	} else {
 		j.state = Stopped
 	}

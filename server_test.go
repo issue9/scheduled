@@ -42,7 +42,9 @@ func TestServer_Serve(t *testing.T) {
 		a.NotError(srv.Serve(nil, nil))
 	}()
 	time.Sleep(5 * time.Second)
+	a.ErrorIs(srv.Serve(nil, nil), ErrRunning)
 	srv.Stop()
+	srv.Stop() // 多次调用，不会出错
 
 	a.NotEmpty(tickers1)
 	for i := 1; i < len(tickers1); i++ {
@@ -102,16 +104,16 @@ type zero struct{}
 
 func (z zero) Next(time.Time) time.Time { return time.Time{} }
 
-// 初始为空，运行 Serve 之后动态添加任务
+// 附带一个 next 永远为 0 的任务
 func TestServer_Serve_zero(t *testing.T) {
 	a := assert.New(t)
 	srv := NewServer(nil)
 	a.NotNil(srv)
 
+	// zero 应该永远不会被执行。
 	tickers1 := make([]time.Time, 0, 20)
-	tickers2 := make([]time.Time, 0, 20)
-
 	srv.New("zero-ticker1", func(t time.Time) error {
+		tickers1 = append(tickers1, t)
 		println("zero-ticker1", t.String())
 		return nil
 	}, zero{}, false)
@@ -123,6 +125,7 @@ func TestServer_Serve_zero(t *testing.T) {
 	time.Sleep(500 * time.Millisecond) // 等待 srv.Serve
 	a.True(srv.running)
 
+	tickers2 := make([]time.Time, 0, 20)
 	srv.Tick("zero-ticker2", func(t time.Time) error {
 		tickers2 = append(tickers2, t)
 		println("zero-ticker2", t.String())
@@ -134,7 +137,7 @@ func TestServer_Serve_zero(t *testing.T) {
 
 	a.Empty(tickers1)
 	a.NotEmpty(tickers2)
-	for i := 1; i < len(tickers1); i++ {
+	for i := 1; i < len(tickers2); i++ {
 		prev := tickers2[i-1].Unix()
 		curr := tickers2[i].Unix()
 		a.Equal(prev+1, curr, "%v != %v", prev, curr)

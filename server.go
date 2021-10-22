@@ -114,7 +114,7 @@ func (s *Server) schedule(erro, info *log.Logger) {
 
 	now := time.Now()
 	for _, j := range s.jobs {
-		if j.next.After(now) {
+		if j.next.After(now) || j.next.IsZero() {
 			break
 		}
 

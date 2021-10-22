@@ -81,7 +81,7 @@ func TestJob_run(t *testing.T) {
 		s:    newTickerJob(time.Second, false),
 	}
 	j.init(now)
-	j.run(now, nil, nil)
+	j.run(now, errlog, errlog)
 	a.NotNil(j.Err()).
 		Equal(j.State(), Failed).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
@@ -98,6 +98,7 @@ func TestJob_run(t *testing.T) {
 	j.run(now, nil, nil)
 	a.Nil(j.Err()).
 		Equal(j.State(), Stopped).
+		True(j.Delay()).
 		Equal(j.Next().Unix(), now.Add(3*time.Second).Unix()) // delayFunc 延时两秒
 
 	// delay == false
@@ -112,6 +113,8 @@ func TestJob_run(t *testing.T) {
 	j.run(now, nil, nil)
 	a.Nil(j.Err()).
 		Equal(j.State(), Stopped).
+		Empty(j.Prev()).
+		False(j.Delay()).
 		Equal(j.Next().Unix(), now.Add(3*time.Second).Unix())
 }
 
@@ -143,9 +146,9 @@ func TestSortJobs(t *testing.T) {
 	}
 
 	sortJobs(jobs)
-	a.Equal(jobs[0].name, "3").
-		Equal(jobs[1].name, "5").
-		Equal(jobs[2].name, "1")
+	a.Equal(jobs[0].Name(), "3").
+		Equal(jobs[1].Name(), "5").
+		Equal(jobs[2].Name(), "1")
 }
 
 func TestServer_Jobs(t *testing.T) {
