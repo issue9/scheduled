@@ -164,7 +164,9 @@ func TestServer_Serve_loc(t *testing.T) {
 	spec := fmt.Sprintf("%d %d %d %d %d *", s, minute, h, d, m)
 
 	srv.Cron("cron", job, spec, false)
-	go srv.Serve()
+	go func() {
+		a.NotError(srv.Serve())
+	}()
 	time.Sleep(4 * time.Second) // 等待 4 秒
 	srv.Stop()
 	a.Equal(0, buf.Len(), buf.String())

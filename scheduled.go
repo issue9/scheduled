@@ -17,11 +17,7 @@ import (
 	"github.com/issue9/scheduled/schedulers"
 )
 
-// 一些错误的定义
-var (
-	ErrNoJobs  = errors.New("任务列表为空")
-	ErrRunning = errors.New("任务已经在运行")
-)
+var ErrRunning = errors.New("任务已经在运行")
 
 // 表示任务状态
 const (

@@ -28,7 +28,6 @@ type Job struct {
 
 	// prev 上次实际上执行的时间
 	// next 下一次可能执行的时间
-	// at 是由调度器在实际调用时的时间。
 	prev, next time.Time
 }
 
@@ -113,6 +112,8 @@ func sortJobs(jobs []*Job) {
 }
 
 // Jobs 返回所有注册的任务
+//
+// 返回的是当前状态下的副本，具有时效性。
 func (s *Server) Jobs() []*Job {
 	jobs := make([]*Job, 0, len(s.jobs))
 	jobs = append(jobs, s.jobs...)
