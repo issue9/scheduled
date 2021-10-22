@@ -118,7 +118,7 @@ func (s *Server) schedule(erro, info *log.Logger) {
 			break
 		}
 
-		if j.State() == Running && j.Delay() { // 上一次任务还没结束，且是 delay 模式，则跳过此次任务
+		if j.State() == Running && j.Delay() {
 			continue
 		}
 

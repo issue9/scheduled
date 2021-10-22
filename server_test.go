@@ -144,6 +144,51 @@ func TestServer_Serve_zero(t *testing.T) {
 	}
 }
 
+// 一个运行时间超过一个时间间隔的任务
+func TestServer_Serve_delay(t *testing.T) {
+	a := assert.New(t)
+	srv := NewServer(nil)
+	a.NotNil(srv)
+
+	tickers1 := make([]time.Time, 0, 20)
+	srv.Tick("delay-ticker1", func(t time.Time) error {
+		tickers1 = append(tickers1, t)
+		println("delay-ticker1", t.String())
+		time.Sleep(2 * time.Second)
+		return nil
+	}, time.Second, true, true)
+
+	tickers2 := make([]time.Time, 0, 20)
+	srv.Tick("delay-ticker2", func(t time.Time) error {
+		tickers2 = append(tickers2, t)
+		println("delay-ticker2", t.String())
+		time.Sleep(2 * time.Second)
+		return nil
+	}, time.Second, false, true)
+
+	go func() {
+		a.NotError(srv.Serve(nil, nil))
+	}()
+	time.Sleep(500 * time.Millisecond) // 等待 srv.Serve
+	a.True(srv.running)
+
+	time.Sleep(5 * time.Second)
+	srv.Stop()
+
+	a.NotEmpty(tickers1)
+	a.NotEmpty(tickers2)
+	for i := 1; i < len(tickers1); i++ {
+		prev := tickers1[i-1].Unix()
+		curr := tickers1[i].Unix()
+		a.Equal(prev+2, curr, "%v != %v", prev, curr)
+	}
+	for i := 1; i < len(tickers2); i++ {
+		prev := tickers2[i-1].Unix()
+		curr := tickers2[i].Unix()
+		a.Equal(prev+2, curr, "%v != %v", prev, curr)
+	}
+}
+
 func TestServer_Serve_loc(t *testing.T) {
 	a := assert.New(t)
 
