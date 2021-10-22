@@ -18,7 +18,7 @@ scheduled 是一个计划任务管理工具
 - ticker 以固定的时间段执行任务，与 time.Ticker 相同；
 
 ```go
-srv := scheduled.NewServer(time.UTC)
+srv := scheduled.NewServer(time.UTC, nil, nil)
 
 ticker := func() error {
     _,err := fmt.Println("ticker @ ", time.Now())

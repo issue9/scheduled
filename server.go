@@ -16,17 +16,14 @@ type Server struct {
 	scheduleLocker sync.Mutex
 	stop           chan struct{}
 
-	loc             *time.Location
-	running         bool
-	errlog, infolog *log.Logger
+	loc     *time.Location
+	running bool
 }
 
 // NewServer 声明 Server 对象实例
 //
 // loc 指定当前所采用的时区，若为 nil，则会采用 time.Local 的值；
-// errlog 定时任务的错误信息在此通道输出，若为空，则不输出；
-// infolog 如果不为空，则会输出一些额外的提示信息，方便调试。
-func NewServer(loc *time.Location, errlog, infolog *log.Logger) *Server {
+func NewServer(loc *time.Location) *Server {
 	if loc == nil {
 		loc = time.Local
 	}
@@ -37,9 +34,7 @@ func NewServer(loc *time.Location, errlog, infolog *log.Logger) *Server {
 		exitTimer:     make(chan struct{}, 1),
 		stop:          make(chan struct{}, 1),
 
-		loc:     loc,
-		errlog:  errlog,
-		infolog: infolog,
+		loc: loc,
 	}
 }
 
@@ -47,7 +42,11 @@ func NewServer(loc *time.Location, errlog, infolog *log.Logger) *Server {
 func (s *Server) Location() *time.Location { return s.loc }
 
 // Serve 运行服务
-func (s *Server) Serve() error {
+//
+// erro 计划任务发生的错误，向此输出，可以为空，表示不输出；
+// info 计划任务的执行信息，向此输出，可以为空，表示不输出；
+// 返回的错误表示在 Serve 处理过程中函数本身的错误。
+func (s *Server) Serve(erro, info *log.Logger) error {
 	if s.running {
 		return ErrRunning
 	}
@@ -67,7 +66,7 @@ func (s *Server) Serve() error {
 		case <-s.stop:
 			return nil
 		case <-s.nextScheduled:
-			s.schedule()
+			s.schedule(erro, info)
 		}
 	}
 }
@@ -84,7 +83,7 @@ func (s *Server) sendNextScheduled() {
 // 并重新生成一个最近时间的定时器。如果上一个定时器还未结束，
 // 则会自动结束上一个定时器，schedule 会保证同一时间，
 // 只有一个函数实例在运行。
-func (s *Server) schedule() {
+func (s *Server) schedule(erro, info *log.Logger) {
 	s.scheduleLocker.Lock()
 	defer s.scheduleLocker.Unlock()
 
@@ -124,7 +123,7 @@ func (s *Server) schedule() {
 		}
 
 		j.calcState() // 计算关键信息
-		go j.run(now, s.errlog, s.infolog)
+		go j.run(now, erro, info)
 	}
 
 	s.sendNextScheduled()
