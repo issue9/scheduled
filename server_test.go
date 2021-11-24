@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/issue9/assert"
+	"github.com/issue9/assert/v2"
 )
 
 func TestServer_Serve(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 	srv := NewServer(nil)
 	a.NotNil(srv)
 
@@ -70,7 +70,7 @@ func TestServer_Serve(t *testing.T) {
 
 // 初始为空，运行 Serve 之后动态添加任务
 func TestServer_Serve_empty(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 	srv := NewServer(nil)
 	a.NotNil(srv)
 	a.Empty(srv.jobs)
@@ -106,7 +106,7 @@ func (z zero) Next(time.Time) time.Time { return time.Time{} }
 
 // 附带一个 next 永远为 0 的任务
 func TestServer_Serve_zero(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 	srv := NewServer(nil)
 	a.NotNil(srv)
 
@@ -146,7 +146,7 @@ func TestServer_Serve_zero(t *testing.T) {
 
 // 一个运行时间超过一个时间间隔的任务
 func TestServer_Serve_delay(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 	srv := NewServer(nil)
 	a.NotNil(srv)
 
@@ -190,12 +190,12 @@ func TestServer_Serve_delay(t *testing.T) {
 }
 
 func TestServer_Serve_loc(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	// 将 srv 的时区调到 15 小时前，保证 job 还没到时间
 	loc := time.FixedZone("UTC-15", -15*60*60)
 	srv := NewServer(loc)
-	a.NotError(srv)
+	a.NotNil(srv)
 
 	buf := new(bytes.Buffer)
 	a.Equal(0, buf.Len())

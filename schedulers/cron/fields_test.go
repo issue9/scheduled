@@ -5,11 +5,11 @@ package cron
 import (
 	"testing"
 
-	"github.com/issue9/assert"
+	"github.com/issue9/assert/v2"
 )
 
 func TestParseField(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	type field struct {
 		typ    int
@@ -154,7 +154,7 @@ func TestParseField(t *testing.T) {
 }
 
 func TestBits_next(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	type test struct {
 		// 输入

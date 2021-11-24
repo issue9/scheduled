@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/issue9/assert"
+	"github.com/issue9/assert/v2"
 
 	"github.com/issue9/scheduled/schedulers"
 	"github.com/issue9/scheduled/schedulers/ticker"
@@ -42,7 +42,7 @@ var (
 )
 
 func TestJob_run(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	newTickerJob := func(duration time.Duration, imm bool) schedulers.Scheduler {
 		s := ticker.New(duration, imm)
@@ -119,7 +119,7 @@ func TestJob_run(t *testing.T) {
 }
 
 func TestSortJobs(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	now := time.Now()
 	jobs := []*Job{
@@ -152,7 +152,7 @@ func TestSortJobs(t *testing.T) {
 }
 
 func TestServer_Jobs(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 	srv := NewServer(nil)
 	a.NotNil(srv)
 
@@ -166,7 +166,7 @@ func TestServer_Jobs(t *testing.T) {
 }
 
 func TestServer_NewCron(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	srv := NewServer(nil)
 	srv.Cron("test", nil, "* * * 3-7 * *", false)

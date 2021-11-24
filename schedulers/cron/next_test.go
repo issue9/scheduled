@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/issue9/assert"
+	"github.com/issue9/assert/v2"
 )
 
 func TestCron_Next(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	type test struct {
 		loc  *time.Location
@@ -231,7 +231,7 @@ func TestCron_Next(t *testing.T) {
 }
 
 func TestGetMonthDays(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	var (
 		leapDays = map[int]int{
@@ -276,7 +276,7 @@ func TestGetMonthDays(t *testing.T) {
 }
 
 func TestGetMonthWeekDay(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	type test struct {
 		// 输入值

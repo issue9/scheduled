@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/issue9/assert"
+	"github.com/issue9/assert/v2"
 
 	"github.com/issue9/scheduled/schedulers"
 )
@@ -25,7 +25,7 @@ func pow2(y ...uint64) fields {
 }
 
 func TestReboot(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	s, err := Parse("@reboot", time.Local)
 	a.NotError(err).NotNil(s)
@@ -35,7 +35,7 @@ func TestReboot(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	type test struct {
 		expr   string
