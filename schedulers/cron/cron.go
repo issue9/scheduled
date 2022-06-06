@@ -93,18 +93,18 @@ func Parse(spec string, loc *time.Location) (schedulers.Scheduler, error) {
 		loc:  loc,
 	}
 
-	allAny := true // 是否所有字段都是 any
+	allAny := true // 是否所有字段都是 asterisk
 	for i, field := range fs {
 		vals, err := parseField(i, field)
 		if err != nil {
 			return nil, err
 		}
 
-		if allAny && vals != any {
+		if allAny && vals != asterisk {
 			allAny = false
 		}
 
-		if !allAny && vals == any {
+		if !allAny && vals == asterisk {
 			vals = step
 		}
 

@@ -50,19 +50,19 @@ func TestParse(t *testing.T) {
 		},
 		{
 			expr: "* * * * * 1",
-			vals: []fields{any, any, any, any, any, pow2(1)},
+			vals: []fields{asterisk, asterisk, asterisk, asterisk, asterisk, pow2(1)},
 		},
 		{
 			expr: "* * * * * 0",
-			vals: []fields{any, any, any, any, any, pow2(0)},
+			vals: []fields{asterisk, asterisk, asterisk, asterisk, asterisk, pow2(0)},
 		},
 		{
 			expr: "* * * * * 6",
-			vals: []fields{any, any, any, any, any, pow2(6)},
+			vals: []fields{asterisk, asterisk, asterisk, asterisk, asterisk, pow2(6)},
 		},
 		{
 			expr: "* 3 * * * 6",
-			vals: []fields{any, pow2(3), step, step, step, pow2(6)},
+			vals: []fields{asterisk, pow2(3), step, step, step, pow2(6)},
 		},
 		{
 			expr: "@daily",

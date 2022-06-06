@@ -97,7 +97,7 @@ func (s *Server) schedule(erro, info *log.Logger) {
 		dur = time.Until(s.jobs[0].next)
 	}
 
-	// dur >0 表示没有需要立即执行的，根据最早的一条任务做一个计时器。
+	// dur > 0 表示没有需要立即执行的，根据最早的一条任务做一个计时器。
 	if dur > 0 {
 		timer := time.NewTimer(dur)
 		for {

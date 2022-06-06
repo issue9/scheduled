@@ -21,12 +21,12 @@ import (
 type fields uint64
 
 const (
-	// any 和 step 是两个特殊的标记位，需要大于 60（所有字段中，秒数最大，
+	// asterisk 和 step 是两个特殊的标记位，需要大于 60（所有字段中，秒数最大，
 	// 但不会超过 60）
 
-	// any 表示当前字段可以是任意值，即对值不做任意要求，
-	// 甚至可以一直是相同的值，也不会做累加。
-	any fields = 1 << 61
+	// asterisk 表示当前字段可以是任意值，即对值不做任意要求，
+	// 甚至可以一直是相同的值，也不会做累加，即 * 符号表示的值。
+	asterisk fields = 1 << 61
 
 	// step 表示当前字段是允许范围内的所有值。
 	// 每次计算时，按其当前值加 1 即可。
@@ -54,7 +54,7 @@ func (b bound) valid(v int) bool { return v >= b.min && v <= b.max }
 // val 返回计算后的最近一个时间值；
 // c 是否需要下一个值进位。
 func (fs fields) next(curr int, b bound, greater bool) (val int, c bool) {
-	if fs == any { // any 表示对当前值没有要求，不需要增加值。
+	if fs == asterisk { // asterisk 表示对当前值没有要求，不需要增加值。
 		return curr, greater
 	} else if fs == step {
 		if greater {
@@ -92,7 +92,7 @@ func (fs fields) next(curr int, b bound, greater bool) (val int, c bool) {
 //  n1-n2,n3-n4,n5
 func parseField(typ int, field string) (fields, error) {
 	if field == "*" {
-		return any, nil
+		return asterisk, nil
 	}
 
 	fs := strings.FieldsFunc(field, func(r rune) bool { return r == ',' })

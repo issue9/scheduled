@@ -22,7 +22,7 @@ func TestParseField(t *testing.T) {
 		{
 			typ:   secondIndex,
 			field: "*",
-			vals:  any,
+			vals:  asterisk,
 		},
 		{
 			typ:   secondIndex,
@@ -208,7 +208,7 @@ func TestBits_next(t *testing.T) {
 		{
 			typ:   secondIndex,
 			curr:  59,
-			bits:  any,
+			bits:  asterisk,
 			carry: false,
 			v:     59,
 			c:     false,
@@ -244,7 +244,7 @@ func TestBits_next(t *testing.T) {
 		{
 			typ:   secondIndex,
 			curr:  5,
-			bits:  any,
+			bits:  asterisk,
 			carry: true,
 			v:     5,
 			c:     true,
@@ -253,7 +253,7 @@ func TestBits_next(t *testing.T) {
 		{
 			typ:   secondIndex,
 			curr:  5,
-			bits:  any,
+			bits:  asterisk,
 			carry: false,
 			v:     5,
 			c:     false,

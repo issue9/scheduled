@@ -27,7 +27,7 @@ func (c *cron) Next(last time.Time) time.Time {
 	hour, carry := c.data[hourIndex].next(dt.hour, bounds[hourIndex], carry)
 
 	var year, month, day int
-	if c.data[weekIndex] != any && c.data[weekIndex] != step {
+	if c.data[weekIndex] != asterisk && c.data[weekIndex] != step {
 		year, month, day = c.nextWeekDay(dt, carry)
 	} else {
 		year, month, day = c.nextMonthDay(dt, carry)
@@ -84,7 +84,7 @@ func (c *cron) nextWeekDay(dt *datetime, carry bool) (year, month, day int) {
 	}
 
 	// 同时设置了 day，需要比较两个值哪个更近
-	if c.data[dayIndex] != any && c.data[dayIndex] != step {
+	if c.data[dayIndex] != asterisk && c.data[dayIndex] != step {
 		y, m, d := c.nextMonthDay(dt, carry)
 		if !(year < y || month < m || day < d) {
 			year = y

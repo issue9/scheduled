@@ -16,7 +16,7 @@ type scheduler struct {
 // At 返回只在指定时间执行一次的调度器
 func At(t time.Time) schedulers.Scheduler { return &scheduler{t: t} }
 
-func (s *scheduler) Next(last time.Time) time.Time {
+func (s *scheduler) Next(_ time.Time) time.Time {
 	if s.t.IsZero() {
 		return s.t
 	}
