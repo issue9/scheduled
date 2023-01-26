@@ -3,6 +3,7 @@
 package scheduled
 
 import (
+	"context"
 	"log"
 	"sync"
 	"time"
@@ -12,9 +13,8 @@ import (
 type Server struct {
 	jobs           []*Job
 	nextScheduled  chan struct{} // 需要指行下一次调度任务
-	exitTimer      chan struct{}
+	exitSchedule   chan struct{} // 需要退出 Server.schedule 方法
 	scheduleLocker sync.Mutex
-	stop           chan struct{}
 
 	loc        *time.Location
 	running    bool
@@ -34,8 +34,7 @@ func NewServer(loc *time.Location, erro, info *log.Logger) *Server {
 	return &Server{
 		jobs:          make([]*Job, 0, 100),
 		nextScheduled: make(chan struct{}, 1),
-		exitTimer:     make(chan struct{}, 1),
-		stop:          make(chan struct{}, 1),
+		exitSchedule:  make(chan struct{}, 1),
 
 		loc:  loc,
 		erro: erro,
@@ -47,10 +46,13 @@ func NewServer(loc *time.Location, erro, info *log.Logger) *Server {
 func (s *Server) Location() *time.Location { return s.loc }
 
 // Serve 运行服务
-func (s *Server) Serve() error {
+func (s *Server) Serve(ctx context.Context) error {
 	if s.running {
 		return ErrRunning
 	}
+	defer func() {
+		s.running = false
+	}()
 
 	s.running = true
 
@@ -64,10 +66,10 @@ func (s *Server) Serve() error {
 
 	for {
 		select {
-		case <-s.stop:
-			return nil
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-s.nextScheduled:
-			s.schedule()
+			s.schedule(ctx)
 		}
 	}
 }
@@ -84,7 +86,7 @@ func (s *Server) sendNextScheduled() {
 // 并重新生成一个最近时间的定时器。如果上一个定时器还未结束，
 // 则会自动结束上一个定时器，schedule 会保证同一时间，
 // 只有一个函数实例在运行。
-func (s *Server) schedule() {
+func (s *Server) schedule(ctx context.Context) {
 	s.scheduleLocker.Lock()
 	defer s.scheduleLocker.Unlock()
 
@@ -103,11 +105,12 @@ func (s *Server) schedule() {
 		timer := time.NewTimer(dur)
 		for {
 			select {
+			case <-ctx.Done():
+				return
 			case <-timer.C:
 				s.sendNextScheduled()
 				return
-			case <-s.exitTimer:
-				s.sendNextScheduled()
+			case <-s.exitSchedule:
 				return
 			}
 		}
@@ -128,18 +131,4 @@ func (s *Server) schedule() {
 	}
 
 	s.sendNextScheduled()
-}
-
-// Stop 停止当前服务
-func (s *Server) Stop() {
-	if !s.running {
-		return
-	}
-
-	s.running = false
-
-	// NOTE: 不能通过关闭 nextScheduled 来结束 Server。
-	// 因为 schedule() 是异步执行的，
-	// 会源源不断地推内容到 nextJob，如果关闭，可能会造成 schedule() panic
-	s.stop <- struct{}{}
 }

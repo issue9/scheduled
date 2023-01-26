@@ -4,6 +4,7 @@ package scheduled
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math"
 	"testing"
@@ -39,13 +40,13 @@ func TestServer_Serve(t *testing.T) {
 		return nil
 	}, 2*time.Second, true, true)
 
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		a.NotError(srv.Serve())
+		a.ErrorIs(srv.Serve(ctx), context.Canceled)
 	}()
 	time.Sleep(5 * time.Second)
-	a.ErrorIs(srv.Serve(), ErrRunning)
-	srv.Stop()
-	srv.Stop() // 多次调用，不会出错
+	a.ErrorIs(srv.Serve(ctx), ErrRunning)
+	cancel()
 
 	a.NotEmpty(tickers1)
 	for i := 1; i < len(tickers1); i++ {
@@ -76,8 +77,9 @@ func TestServer_Serve_empty(t *testing.T) {
 	a.NotNil(srv)
 	a.Empty(srv.jobs)
 
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		a.NotError(srv.Serve())
+		srv.Serve(ctx)
 	}()
 	time.Sleep(500 * time.Millisecond) // 等待 srv.Serve
 	a.True(srv.running)
@@ -91,7 +93,7 @@ func TestServer_Serve_empty(t *testing.T) {
 	}, time.Second, true, false)
 
 	time.Sleep(5 * time.Second)
-	srv.Stop()
+	cancel()
 
 	a.NotEmpty(tickers1)
 	for i := 1; i < len(tickers1); i++ {
@@ -120,8 +122,9 @@ func TestServer_Serve_zero(t *testing.T) {
 	}, zero{}, false)
 	a.Equal(len(srv.Jobs()), 1)
 
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		a.NotError(srv.Serve())
+		srv.Serve(ctx)
 	}()
 	time.Sleep(500 * time.Millisecond) // 等待 srv.Serve
 	a.True(srv.running)
@@ -134,7 +137,7 @@ func TestServer_Serve_zero(t *testing.T) {
 	}, time.Second, true, false)
 
 	time.Sleep(5 * time.Second)
-	srv.Stop()
+	cancel()
 
 	a.Empty(tickers1)
 	a.NotEmpty(tickers2)
@@ -167,14 +170,15 @@ func TestServer_Serve_delay(t *testing.T) {
 		return nil
 	}, time.Second, false, true)
 
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		a.NotError(srv.Serve())
+		srv.Serve(ctx)
 	}()
 	time.Sleep(500 * time.Millisecond) // 等待 srv.Serve
 	a.True(srv.running)
 
 	time.Sleep(5 * time.Second)
-	srv.Stop()
+	cancel()
 
 	a.NotEmpty(tickers1)
 	a.NotEmpty(tickers2)
@@ -215,10 +219,11 @@ func TestServer_Serve_loc(t *testing.T) {
 	spec := fmt.Sprintf("%d %d %d %d %d *", s, minute, h, d, m)
 
 	srv.Cron("cron", job, spec, false)
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		a.NotError(srv.Serve())
+		srv.Serve(ctx)
 	}()
 	time.Sleep(4 * time.Second) // 等待 4 秒
-	srv.Stop()
+	cancel()
 	a.Equal(0, buf.Len(), buf.String())
 }
