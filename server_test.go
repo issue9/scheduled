@@ -14,7 +14,7 @@ import (
 
 func TestServer_Serve(t *testing.T) {
 	a := assert.New(t, false)
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 	a.NotNil(srv)
 
 	tickers1 := make([]time.Time, 0, 20)
@@ -40,10 +40,10 @@ func TestServer_Serve(t *testing.T) {
 	}, 2*time.Second, true, true)
 
 	go func() {
-		a.NotError(srv.Serve(nil, nil))
+		a.NotError(srv.Serve())
 	}()
 	time.Sleep(5 * time.Second)
-	a.ErrorIs(srv.Serve(nil, nil), ErrRunning)
+	a.ErrorIs(srv.Serve(), ErrRunning)
 	srv.Stop()
 	srv.Stop() // 多次调用，不会出错
 
@@ -72,12 +72,12 @@ func TestServer_Serve(t *testing.T) {
 // 初始为空，运行 Serve 之后动态添加任务
 func TestServer_Serve_empty(t *testing.T) {
 	a := assert.New(t, false)
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 	a.NotNil(srv)
 	a.Empty(srv.jobs)
 
 	go func() {
-		a.NotError(srv.Serve(nil, nil))
+		a.NotError(srv.Serve())
 	}()
 	time.Sleep(500 * time.Millisecond) // 等待 srv.Serve
 	a.True(srv.running)
@@ -108,7 +108,7 @@ func (z zero) Next(time.Time) time.Time { return time.Time{} }
 // 附带一个 next 永远为 0 的任务
 func TestServer_Serve_zero(t *testing.T) {
 	a := assert.New(t, false)
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 	a.NotNil(srv)
 
 	// zero 应该永远不会被执行。
@@ -121,7 +121,7 @@ func TestServer_Serve_zero(t *testing.T) {
 	a.Equal(len(srv.Jobs()), 1)
 
 	go func() {
-		a.NotError(srv.Serve(nil, nil))
+		a.NotError(srv.Serve())
 	}()
 	time.Sleep(500 * time.Millisecond) // 等待 srv.Serve
 	a.True(srv.running)
@@ -148,7 +148,7 @@ func TestServer_Serve_zero(t *testing.T) {
 // 一个运行时间超过一个时间间隔的任务
 func TestServer_Serve_delay(t *testing.T) {
 	a := assert.New(t, false)
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 	a.NotNil(srv)
 
 	tickers1 := make([]time.Time, 0, 20)
@@ -168,7 +168,7 @@ func TestServer_Serve_delay(t *testing.T) {
 	}, time.Second, false, true)
 
 	go func() {
-		a.NotError(srv.Serve(nil, nil))
+		a.NotError(srv.Serve())
 	}()
 	time.Sleep(500 * time.Millisecond) // 等待 srv.Serve
 	a.True(srv.running)
@@ -197,7 +197,7 @@ func TestServer_Serve_loc(t *testing.T) {
 
 	// 将 srv 的时区调到 15 小时前，保证 job 还没到时间
 	loc := time.FixedZone("UTC-15", -15*60*60)
-	srv := NewServer(loc)
+	srv := NewServer(loc, errlog, nil)
 	a.NotNil(srv)
 
 	buf := new(bytes.Buffer)
@@ -216,7 +216,7 @@ func TestServer_Serve_loc(t *testing.T) {
 
 	srv.Cron("cron", job, spec, false)
 	go func() {
-		a.NotError(srv.Serve(errlog, nil))
+		a.NotError(srv.Serve())
 	}()
 	time.Sleep(4 * time.Second) // 等待 4 秒
 	srv.Stop()

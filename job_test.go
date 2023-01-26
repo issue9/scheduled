@@ -4,7 +4,7 @@ package scheduled
 
 import (
 	"errors"
-	"io/ioutil"
+	"io"
 	"log"
 	"testing"
 	"time"
@@ -38,7 +38,7 @@ var (
 		return nil
 	}
 
-	errlog = log.New(ioutil.Discard, "ERRO", 0)
+	errlog = log.New(io.Discard, "ERRO", 0)
 )
 
 func TestJob_run(t *testing.T) {
@@ -153,7 +153,7 @@ func TestSortJobs(t *testing.T) {
 
 func TestServer_Jobs(t *testing.T) {
 	a := assert.New(t, false)
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 	a.NotNil(srv)
 
 	now := time.Now()
@@ -168,7 +168,7 @@ func TestServer_Jobs(t *testing.T) {
 func TestServer_NewCron(t *testing.T) {
 	a := assert.New(t, false)
 
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 	srv.Cron("test", nil, "* * * 3-7 * *", false)
 	a.Panic(func() {
 		srv.Cron("test", nil, "* * * 3-7a * *", false)
