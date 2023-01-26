@@ -35,7 +35,8 @@ srv.Tick(ticker, 1*time.Minute, false, false)
 srv.Cron(expr, "@daily", false)
 srv.Cron(expr, "* * 1 * * *", false)
 
-log.Panic(srv.Serve())
+ctx, cancel := context.WithCancel(context.Background())
+srv.Serve(ctx)
 ```
 
 版权
