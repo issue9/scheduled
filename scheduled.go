@@ -11,7 +11,11 @@
 // - ticker 以固定的时间段执行任务，与 [time.Ticker] 相同。
 package scheduled
 
-import "github.com/issue9/scheduled/schedulers"
+import (
+	"fmt"
+
+	"github.com/issue9/scheduled/schedulers"
+)
 
 // 表示任务状态
 const (
@@ -31,15 +35,41 @@ type Logger interface {
 // State 状态值类型
 type State int8
 
-func (s State) String() string {
-	switch s {
-	case Stopped:
-		return "stopped"
-	case Running:
-		return "running"
-	case Failed:
-		return "failed"
-	default:
-		return "<unknown>"
+var (
+	stateStringMap = map[State]string{
+		Stopped: "stopped",
+		Running: "running",
+		Failed:  "failed",
 	}
+
+	stringStateMap = map[string]State{
+		"stopped": Stopped,
+		"running": Running,
+		"failed":  Failed,
+	}
+)
+
+func (s State) String() string {
+	v, found := stateStringMap[s]
+	if !found {
+		v = "<unknown>"
+	}
+	return v
+}
+
+func (s State) MarshalText() ([]byte, error) {
+	v, found := stateStringMap[s]
+	if found {
+		return []byte(v), nil
+	}
+	return nil, fmt.Errorf("无效的值 %v", s)
+}
+
+func (s *State) UnmarshalText(data []byte) error {
+	v, found := stringStateMap[string(data)]
+	if !found {
+		return fmt.Errorf("无效的值 %v", string(data))
+	}
+	*s = v
+	return nil
 }
