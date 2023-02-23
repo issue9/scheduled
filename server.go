@@ -47,14 +47,10 @@ func (s *Server) Location() *time.Location { return s.loc }
 
 // Serve 运行服务
 func (s *Server) Serve(ctx context.Context) error {
-	if s.running {
-		return ErrRunning
-	}
+	s.running = true
 	defer func() {
 		s.running = false
 	}()
-
-	s.running = true
 
 	// 初始化任务
 	now := time.Now()

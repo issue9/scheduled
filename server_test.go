@@ -45,7 +45,6 @@ func TestServer_Serve(t *testing.T) {
 		a.ErrorIs(srv.Serve(ctx), context.Canceled)
 	}()
 	time.Sleep(5 * time.Second)
-	a.ErrorIs(srv.Serve(ctx), ErrRunning)
 	cancel()
 
 	a.NotEmpty(tickers1)
