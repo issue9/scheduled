@@ -4,7 +4,6 @@ package scheduled
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 )
@@ -18,7 +17,7 @@ type Server struct {
 
 	loc        *time.Location
 	running    bool
-	erro, info *log.Logger
+	erro, info Logger
 }
 
 // NewServer 声明 Server 对象实例
@@ -26,7 +25,7 @@ type Server struct {
 // loc 指定当前所采用的时区，若为 nil，则会采用 [time.Local] 的值；
 // erro 计划任务发生的错误，向此输出，可以为空，表示不输出；
 // info 计划任务的执行信息，向此输出，可以为空，表示不输出；
-func NewServer(loc *time.Location, erro, info *log.Logger) *Server {
+func NewServer(loc *time.Location, erro, info Logger) *Server {
 	if loc == nil {
 		loc = time.Local
 	}

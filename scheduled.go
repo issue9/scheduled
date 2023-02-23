@@ -22,6 +22,12 @@ const (
 
 type Scheduler = schedulers.Scheduler
 
+type Logger interface {
+	Print(...interface{})
+	Println(...interface{})
+	Printf(format string, v ...interface{})
+}
+
 // State 状态值类型
 type State int8
 

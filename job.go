@@ -4,7 +4,6 @@ package scheduled
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"time"
 
@@ -65,7 +64,7 @@ func (j *Job) calcState() {
 // 运行当前的任务
 //
 // errlog 在出错时，日志的输出通道，可以为空，表示不输出。
-func (j *Job) run(at time.Time, errlog, infolog *log.Logger) {
+func (j *Job) run(at time.Time, errlog, infolog Logger) {
 	defer func() {
 		if msg := recover(); msg != nil {
 			if err, ok := msg.(error); ok {
