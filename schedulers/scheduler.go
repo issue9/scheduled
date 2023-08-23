@@ -15,3 +15,7 @@ type Scheduler interface {
 	// 传递相同的 last 参数，其返回值应该也相同，或是返回一个零值。
 	Next(last time.Time) time.Time
 }
+
+type SchedulerFunc func(time.Time) time.Time
+
+func (f SchedulerFunc) Next(last time.Time) time.Time { return f(last) }

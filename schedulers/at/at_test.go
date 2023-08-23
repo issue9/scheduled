@@ -7,11 +7,7 @@ import (
 	"time"
 
 	"github.com/issue9/assert/v3"
-
-	"github.com/issue9/scheduled/schedulers"
 )
-
-var _ schedulers.Scheduler = &scheduler{}
 
 func TestAt(t *testing.T) {
 	a := assert.New(t, false)

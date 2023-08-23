@@ -9,28 +9,21 @@ import (
 	"github.com/issue9/scheduled/schedulers"
 )
 
-type ticker struct {
-	dur time.Duration
-	imm bool
-}
-
-// New 声明一个固定时间段的定时任务
+// Tick 声明一个固定时间段的定时任务
 //
 // imm 是否立即执行一次任务，如果为 true，
 // 则会在第一次调用 Next 时返回当前时间。
-func New(d time.Duration, imm bool) schedulers.Scheduler {
+func Tick(d time.Duration, imm bool) schedulers.Scheduler {
 	if d < time.Second {
 		panic("参数 d 的值必须在 1 秒以上")
 	}
 
-	return &ticker{dur: d, imm: imm}
-}
+	return schedulers.SchedulerFunc(func(last time.Time) time.Time {
+		if imm {
+			imm = false
+			return time.Now()
+		}
 
-func (t *ticker) Next(last time.Time) time.Time {
-	if t.imm {
-		t.imm = false
-		return time.Now()
-	}
-
-	return last.Add(t.dur)
+		return last.Add(d)
+	})
 }

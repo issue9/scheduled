@@ -17,23 +17,25 @@ import (
 	"github.com/issue9/scheduled/schedulers"
 )
 
-// 表示任务状态
+// 任务的几种状态
 const (
 	Stopped State = iota
 	Running
 	Failed
 )
 
-type Scheduler = schedulers.Scheduler
+type (
+	Scheduler     = schedulers.Scheduler
+	SchedulerFunc = schedulers.SchedulerFunc
 
-type Logger interface {
-	Print(...interface{})
-	Println(...interface{})
-	Printf(format string, v ...interface{})
-}
+	Logger interface {
+		Print(...interface{})
+		Println(...interface{})
+		Printf(format string, v ...interface{})
+	}
 
-// State 状态值类型
-type State int8
+	State int8
+)
 
 var (
 	stateStringMap = map[State]string{

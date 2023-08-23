@@ -13,7 +13,7 @@ import (
 )
 
 // JobFunc 每一个定时任务实际上执行的函数签名
-type JobFunc func(time.Time) error
+type JobFunc = func(time.Time) error
 
 // Job 一个定时任务的基本接口
 type Job struct {
@@ -130,7 +130,7 @@ func (s *Server) Jobs() []*Job {
 
 // Tick 添加一个新的定时任务
 func (s *Server) Tick(name string, f JobFunc, dur time.Duration, imm, delay bool) {
-	s.New(name, f, ticker.New(dur, imm), delay)
+	s.New(name, f, ticker.Tick(dur, imm), delay)
 }
 
 // Cron 使用 cron 表达式新建一个定时任务

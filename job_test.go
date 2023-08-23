@@ -45,7 +45,7 @@ func TestJob_run(t *testing.T) {
 	a := assert.New(t, false)
 
 	newTickerJob := func(duration time.Duration, imm bool) schedulers.Scheduler {
-		s := ticker.New(duration, imm)
+		s := ticker.Tick(duration, imm)
 		a.NotNil(s)
 		return s
 	}

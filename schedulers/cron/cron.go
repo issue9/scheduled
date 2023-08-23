@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-// Package cron 实现了 cron 表达式的 Scheduler 接口
+// Package cron 实现了 [cron] 表达式的 [schedulers.Scheduler] 接口
+//
+// [cron]: https://zh.wikipedia.org/wiki/Cron
 package cron
 
 import (
@@ -40,35 +42,37 @@ type cron struct {
 	loc  *time.Location
 }
 
-// Parse 根据 spec 初始化 schedulers.Scheduler
+// Parse 根据 spec 初始化 [schedulers.Scheduler]
 //
 // spec 表示 crontab 的格式
 //
 // 区分大小写，支持秒，其格式如下：
-//  * * * * * *
-//  | | | | | |
-//  | | | | | --- 星期
-//  | | | | ----- 月
-//  | | | ------- 日
-//  | | --------- 小时
-//  | ----------- 分
-//  ------------- 秒
 //
-// 星期与日若同时存在，则以或的形式组合。
+//	! * * * * * *
+//	  | | | | | |
+//	  | | | | | --- 星期
+//	  | | | | ----- 月
+//	  | | | ------- 日
+//	  | | --------- 小时
+//	  | ----------- 分
+//	  ------------- 秒
+//
+// 星期与日若同时存在，则以或的形式组合。！用于使 gofmt 不会自动格式化内容，无实际意义。
 //
 // 支持以下符号：
-//  - 表示范围
-//  , 表示和
+//   - - 表示范围
+//   - , 表示和
 //
 // 同时支持以下便捷指令：
-//  @reboot:   启动时执行一次
-//  @yearly:   0 0 0 1 1 *
-//  @annually: 0 0 0 1 1 *
-//  @monthly:  0 0 0 1 * *
-//  @weekly:   0 0 0 * * 0
-//  @daily:    0 0 0 * * *
-//  @midnight: 0 0 0 * * *
-//  @hourly:   0 0 * * * *
+//
+//	@reboot:   启动时执行一次
+//	@yearly:   0 0 0 1 1 *
+//	@annually: 0 0 0 1 1 *
+//	@monthly:  0 0 0 1 * *
+//	@weekly:   0 0 0 * * 0
+//	@daily:    0 0 0 * * *
+//	@midnight: 0 0 0 * * *
+//	@hourly:   0 0 * * * *
 func Parse(spec string, loc *time.Location) (schedulers.Scheduler, error) {
 	switch {
 	case spec == "":

@@ -7,20 +7,16 @@ import (
 	"time"
 
 	"github.com/issue9/assert/v3"
-
-	"github.com/issue9/scheduled/schedulers"
 )
-
-var _ schedulers.Scheduler = &ticker{}
 
 func TestTicker(t *testing.T) {
 	a := assert.New(t, false)
 
 	a.PanicString(func() {
-		New(300*time.Microsecond, false)
+		Tick(300*time.Microsecond, false)
 	}, "参数 d 的值必须在 1 秒以上")
 
-	s := New(5*time.Minute, false)
+	s := Tick(5*time.Minute, false)
 	a.NotNil(s)
 
 	now := time.Now()
@@ -36,7 +32,7 @@ func TestTicker(t *testing.T) {
 
 	// imm == false
 
-	s = New(5*time.Minute, true)
+	s = Tick(5*time.Minute, true)
 	a.NotNil(s)
 	now = time.Now()
 	next1 = s.Next(now)
