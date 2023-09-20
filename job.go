@@ -5,6 +5,7 @@ package scheduled
 import (
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/issue9/scheduled/schedulers/at"
@@ -15,19 +16,20 @@ import (
 // JobFunc 每一个定时任务实际上执行的函数签名
 type JobFunc = func(time.Time) error
 
-// Job 一个定时任务的基本接口
+// Job 定时任务
 type Job struct {
-	s Scheduler
-
+	s     Scheduler
 	name  string
 	f     JobFunc
-	state State
-	err   error // 出错时的错误内容
 	delay bool
 
-	// prev 上次实际上执行的时间
-	// next 下一次可能执行的时间
-	prev, next time.Time
+	// 以下内容需要上锁
+
+	locker sync.RWMutex
+	state  State
+	err    error     // 出错时的错误内容
+	prev   time.Time // 上次实际上执行的时间
+	next   time.Time // 下一次可能执行的时间
 }
 
 // Name 任务的名称
@@ -37,16 +39,32 @@ func (j *Job) Name() string { return j.name }
 //
 // 如果返回值的 IsZero() 为 true，则表示该任务不需要再执行，
 // 一般为 At 之类的一次任务。
-func (j *Job) Next() time.Time { return j.next }
+func (j *Job) Next() time.Time {
+	j.locker.RLock()
+	defer j.locker.RUnlock()
+	return j.next
+}
 
 // Prev 当前正在执行或是上次执行的时间点
-func (j *Job) Prev() time.Time { return j.prev }
+func (j *Job) Prev() time.Time {
+	j.locker.RLock()
+	defer j.locker.RUnlock()
+	return j.prev
+}
 
 // State 获取当前的状态
-func (j *Job) State() State { return j.state }
+func (j *Job) State() State {
+	j.locker.RLock()
+	defer j.locker.RUnlock()
+	return j.state
+}
 
 // Err 返回当前的错误信息
-func (j *Job) Err() error { return j.err }
+func (j *Job) Err() error {
+	j.locker.RLock()
+	defer j.locker.RUnlock()
+	return j.err
+}
 
 // Delay 是否在延迟执行
 //
@@ -56,6 +74,9 @@ func (j *Job) Delay() bool { return j.delay }
 // goroutine 启动需要时间，短时间任务，可能存在 goroutine 未初始化完成，
 // 第二次调用已经开始，所以此处先初始化相关的状态信息，使第二次调用处理非法状态。
 func (j *Job) calcState() {
+	j.locker.Lock()
+	defer j.locker.Unlock()
+
 	j.state = Running
 	j.prev = j.next
 	j.next = j.s.Next(time.Now()) // 先计算 next，保证调用者重复调用 run 时能获取正确的 next。
@@ -65,6 +86,13 @@ func (j *Job) calcState() {
 //
 // errlog 在出错时，日志的输出通道，可以为空，表示不输出。
 func (j *Job) run(at time.Time, errlog, infolog Logger) {
+	if infolog != nil {
+		infolog.Printf("scheduled: start job %s at %s\n", j.Name(), at.String())
+	}
+
+	j.locker.Lock()
+	defer j.locker.Unlock()
+
 	defer func() {
 		if msg := recover(); msg != nil {
 			if err, ok := msg.(error); ok {
@@ -81,10 +109,6 @@ func (j *Job) run(at time.Time, errlog, infolog Logger) {
 		}
 	}()
 
-	if infolog != nil {
-		infolog.Printf("scheduled: start job %s at %s\n", j.Name(), at.String())
-	}
-
 	j.err = j.f(at)
 	if j.err != nil {
 		j.state = Failed
@@ -96,11 +120,15 @@ func (j *Job) run(at time.Time, errlog, infolog Logger) {
 		j.state = Stopped
 	}
 
-	j.next = j.s.Next(time.Now()) // j.f 可能会花费大量时间，重新计算 next
+	j.next = j.s.Next(time.Now()) // j.f 可能会花费大量时间，所以重新计算 next
 }
 
 // 初始化当前任务，获取其下次执行时间。
-func (j *Job) init(now time.Time) { j.next = j.s.Next(now) }
+func (j *Job) init(now time.Time) {
+	j.locker.Lock()
+	defer j.locker.Unlock()
+	j.next = j.s.Next(now)
+}
 
 func sortJobs(jobs []*Job) {
 	sort.SliceStable(jobs, func(i, j int) bool {

@@ -89,10 +89,10 @@ func (s *Server) schedule(ctx context.Context) {
 
 	var dur time.Duration
 
-	if len(s.jobs) == 0 || s.jobs[0].next.IsZero() {
+	if len(s.jobs) == 0 || s.jobs[0].Next().IsZero() {
 		dur = time.Minute
 	} else {
-		dur = time.Until(s.jobs[0].next)
+		dur = time.Until(s.jobs[0].Next())
 	}
 
 	// dur > 0 表示没有需要立即执行的，根据最早的一条任务做一个计时器。
@@ -113,7 +113,8 @@ func (s *Server) schedule(ctx context.Context) {
 
 	now := time.Now()
 	for _, j := range s.jobs {
-		if j.next.After(now) || j.next.IsZero() {
+		next := j.Next() // j.Next() 需要锁，防止反复计算。
+		if next.After(now) || next.IsZero() {
 			break
 		}
 
