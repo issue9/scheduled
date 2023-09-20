@@ -165,7 +165,7 @@ func TestServer_Jobs(t *testing.T) {
 	a.Equal(len(jobs), len(srv.jobs))
 }
 
-func TestServer_NewCron(t *testing.T) {
+func TestServer_Cron(t *testing.T) {
 	a := assert.New(t, false)
 
 	srv := NewServer(nil, nil, nil)

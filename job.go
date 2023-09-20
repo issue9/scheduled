@@ -37,8 +37,7 @@ func (j *Job) Name() string { return j.name }
 
 // Next 返回下次执行的时间点
 //
-// 如果返回值的 IsZero() 为 true，则表示该任务不需要再执行，
-// 一般为 At 之类的一次任务。
+// 如果返回值的 IsZero() 为 true，则表示该任务不需要再执行。
 func (j *Job) Next() time.Time {
 	j.locker.RLock()
 	defer j.locker.RUnlock()
@@ -71,15 +70,13 @@ func (j *Job) Err() error {
 // 即从任务执行完成的时间点计算下一次执行时间。
 func (j *Job) Delay() bool { return j.delay }
 
-// goroutine 启动需要时间，短时间任务，可能存在 goroutine 未初始化完成，
-// 第二次调用已经开始，所以此处先初始化相关的状态信息，使第二次调用处理非法状态。
-func (j *Job) calcState() {
+func (j *Job) calcState(now time.Time) {
 	j.locker.Lock()
 	defer j.locker.Unlock()
 
 	j.state = Running
 	j.prev = j.next
-	j.next = j.s.Next(time.Now()) // 先计算 next，保证调用者重复调用 run 时能获取正确的 next。
+	j.next = j.s.Next(now) // 先计算 next，保证调用者重复调用 run 时能获取正确的 next。
 }
 
 // 运行当前的任务
@@ -100,7 +97,6 @@ func (j *Job) run(at time.Time, errlog, infolog Logger) {
 			} else {
 				j.err = fmt.Errorf("%v", msg)
 			}
-
 			j.state = Failed
 
 			if errlog != nil {
@@ -109,8 +105,7 @@ func (j *Job) run(at time.Time, errlog, infolog Logger) {
 		}
 	}()
 
-	j.err = j.f(at)
-	if j.err != nil {
+	if j.err = j.f(at); j.err != nil {
 		j.state = Failed
 
 		if errlog != nil {
@@ -163,7 +158,7 @@ func (s *Server) Tick(name string, f JobFunc, dur time.Duration, imm, delay bool
 
 // Cron 使用 cron 表达式新建一个定时任务
 //
-// 具体文件可以参考 schedulers/cron.Parse
+// 具体文件可以参考 [cron.Parse]
 func (s *Server) Cron(name string, f JobFunc, spec string, delay bool) {
 	scheduler, err := cron.Parse(spec, s.Location())
 	if err != nil {
@@ -174,7 +169,7 @@ func (s *Server) Cron(name string, f JobFunc, spec string, delay bool) {
 
 // At 添加 At 类型的定时器
 //
-// 具体文件可以参考 schedulers/at.At
+// 具体文件可以参考 [at.At]
 func (s *Server) At(name string, f JobFunc, t time.Time, delay bool) {
 	s.New(name, f, at.At(t), delay)
 }

@@ -184,8 +184,8 @@ func TestServer_Serve_delay(t *testing.T) {
 	for i := 1; i < len(tickers1); i++ {
 		prev := tickers1[i-1].Unix()
 		curr := tickers1[i].Unix()
-		delta := math.Abs(float64(curr - prev)) // 不可能正好相差 2 秒，但应该不会超过 3 秒。
-		a.True(delta <= 3, "%d != %d", prev, curr)
+		delta := math.Abs(float64(curr - prev)) // 缺失一次执行，应该介于 4-6 之间？
+		a.True(delta >= 4 && delta < 6, "%d != %d", prev, curr)
 	}
 	for i := 1; i < len(tickers2); i++ {
 		prev := tickers2[i-1].Unix()

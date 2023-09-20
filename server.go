@@ -113,8 +113,7 @@ func (s *Server) schedule(ctx context.Context) {
 
 	now := time.Now()
 	for _, j := range s.jobs {
-		next := j.Next() // j.Next() 需要锁，防止反复计算。
-		if next.After(now) || next.IsZero() {
+		if next := j.Next(); next.After(now) || next.IsZero() {
 			break
 		}
 
@@ -122,7 +121,9 @@ func (s *Server) schedule(ctx context.Context) {
 			continue
 		}
 
-		j.calcState() // 计算关键信息
+		// j.run 启动需要时间，可能存在 j.run 未初始化完成，第二次调用已经开始，
+		// 所以此处先初始化相关的状态信息，使第二次调用处理非法状态。
+		j.calcState(now)
 		go j.run(now, s.erro, s.info)
 	}
 
