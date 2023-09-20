@@ -1,5 +1,5 @@
 scheduled
-[![Go](https://github.com/issue9/scheduled/workflows/Go/badge.svg)](https://github.com/issue9/scheduled/actions?query=workflow%3AGo)
+[![Go](https://github.com/issue9/scheduled/actions/workflows/go.yml/badge.svg)](https://github.com/issue9/scheduled/actions/workflows/go.yml)
 [![license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://opensource.org/licenses/MIT)
 [![codecov](https://codecov.io/gh/issue9/scheduled/branch/master/graph/badge.svg)](https://codecov.io/gh/issue9/scheduled)
 [![Go version](https://img.shields.io/badge/Go-1.13-brightgreen.svg?style=flat)](https://golang.org)
