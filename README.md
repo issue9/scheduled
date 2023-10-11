@@ -2,7 +2,7 @@ scheduled
 [![Go](https://github.com/issue9/scheduled/actions/workflows/go.yml/badge.svg)](https://github.com/issue9/scheduled/actions/workflows/go.yml)
 [![license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://opensource.org/licenses/MIT)
 [![codecov](https://codecov.io/gh/issue9/scheduled/branch/master/graph/badge.svg)](https://codecov.io/gh/issue9/scheduled)
-[![Go version](https://img.shields.io/badge/Go-1.13-brightgreen.svg?style=flat)](https://golang.org)
+![Go version](https://img.shields.io/github/go-mod/go-version/issue9/scheduled)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/issue9/scheduled)](https://pkg.go.dev/github.com/issue9/scheduled)
 ======
 
