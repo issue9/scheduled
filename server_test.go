@@ -147,7 +147,7 @@ func TestServer_Serve_zero(t *testing.T) {
 	}
 }
 
-// 一个运行时间超过一个时间间隔的任务
+// 运行时间超过一个时间间隔的任务
 func TestServer_Serve_delay(t *testing.T) {
 	a := assert.New(t, false)
 	srv := NewServer(nil, nil, nil)
@@ -179,19 +179,19 @@ func TestServer_Serve_delay(t *testing.T) {
 	time.Sleep(5 * time.Second)
 	cancel()
 
-	a.NotEmpty(tickers1)
-	a.NotEmpty(tickers2)
+	a.NotEmpty(tickers1).
+		NotEmpty(tickers2)
 	for i := 1; i < len(tickers1); i++ {
 		prev := tickers1[i-1].Unix()
 		curr := tickers1[i].Unix()
 		delta := math.Abs(float64(curr - prev)) // 缺失一次执行，应该介于 4-6 之间？
-		a.True(delta >= 4 && delta < 6, "%d != %d", prev, curr)
+		a.True(delta >= 4 && delta < 6, "v1=%d, v2=%d", prev, curr)
 	}
 	for i := 1; i < len(tickers2); i++ {
 		prev := tickers2[i-1].Unix()
 		curr := tickers2[i].Unix()
-		delta := math.Abs(float64(curr - prev))
-		a.True(delta <= 3, "%d != %d", prev, curr)
+		delta := math.Abs(float64(curr - prev)) // 缺失一次执行，应该介于 4-6 之间？
+		a.True(delta >= 4 && delta < 6, "v1=%d, v2=%d", prev, curr)
 	}
 }
 

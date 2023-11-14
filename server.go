@@ -88,15 +88,15 @@ func (s *Server) schedule(ctx context.Context) {
 	sortJobs(s.jobs) // 按执行时间进行排序
 
 	var dur time.Duration
+	now := time.Now()
 
 	if len(s.jobs) == 0 || s.jobs[0].Next().IsZero() {
 		dur = time.Minute
 	} else {
-		dur = time.Until(s.jobs[0].Next())
+		dur = s.jobs[0].Next().Sub(now)
 	}
 
-	// dur > 0 表示没有需要立即执行的，根据最早的一条任务做一个计时器。
-	if dur > 0 {
+	if dur > 0 { // dur > 0 表示没有需要立即执行的，根据最早的一条任务做一个计时器。
 		timer := time.NewTimer(dur)
 		for {
 			select {
@@ -111,7 +111,6 @@ func (s *Server) schedule(ctx context.Context) {
 		}
 	}
 
-	now := time.Now()
 	for _, j := range s.jobs {
 		if next := j.Next(); next.After(now) || next.IsZero() {
 			break
