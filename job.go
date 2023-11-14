@@ -141,6 +141,10 @@ func sortJobs(jobs []*Job) {
 //
 // 返回的是当前状态下的副本，具有时效性。
 func (s *Server) Jobs() []*Job {
+	// NOTE: jobs 有顺序要求，如果直接返回给用户，
+	// 用户可能会对数据进行排序，造成无法使用，所以返回副本。
+
+	// TODO(go1.21): 可以采用 slices.Clone
 	jobs := make([]*Job, 0, len(s.jobs))
 	jobs = append(jobs, s.jobs...)
 
@@ -187,8 +191,7 @@ func (s *Server) New(name string, f JobFunc, scheduler Scheduler, delay bool) {
 	}
 	s.jobs = append(s.jobs, job)
 
-	// 服务已经运行，则需要触发调度任务。
-	if s.running {
+	if s.running { // 服务已经运行，则需要触发调度任务。
 		job.init(time.Now())
 		s.sendNextScheduled()
 		s.exitSchedule <- struct{}{}
