@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MIT
 
+//go:generate web locale -l=und -func=github.com/issue9/scheduled.Logger.Printf -m -f=yaml ./
+//go:generate web update-locale -src=./locales/und.yaml -dest=./locales/zh-CN.yaml
+
 // Package scheduled 个计划任务管理工具
 //
 // 通过 scheduled 可以实现管理类似 linux 中 crontab 功能的计划任务功能。
@@ -28,13 +31,16 @@ type (
 	Scheduler     = schedulers.Scheduler
 	SchedulerFunc = schedulers.SchedulerFunc
 
+	// Logger 日志接口
 	Logger interface {
+		Error(error) // 输出 error 对象到日志
 		Print(...interface{})
-		Println(...interface{})
 		Printf(format string, v ...interface{})
 	}
 
 	State int8
+
+	defaultLogger struct{}
 )
 
 var (
@@ -50,6 +56,12 @@ var (
 		"failed":  Failed,
 	}
 )
+
+func (l *defaultLogger) Error(error) {}
+
+func (l *defaultLogger) Print(v ...interface{}) {}
+
+func (l *defaultLogger) Printf(format string, v ...interface{}) {}
 
 func (s State) String() string {
 	v, found := stateStringMap[s]

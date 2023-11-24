@@ -80,12 +80,8 @@ func (j *Job) calcState(now time.Time) {
 }
 
 // 运行当前的任务
-//
-// errlog 在出错时，日志的输出通道，可以为空，表示不输出。
 func (j *Job) run(at time.Time, errlog, infolog Logger) {
-	if infolog != nil {
-		infolog.Printf("scheduled: start job %s at %s\n", j.Name(), at.String())
-	}
+	infolog.Printf("scheduled: start job %s at %s\n", j.Name(), at.String())
 
 	j.locker.Lock()
 	defer j.locker.Unlock()
@@ -98,19 +94,13 @@ func (j *Job) run(at time.Time, errlog, infolog Logger) {
 				j.err = fmt.Errorf("%v", msg)
 			}
 			j.state = Failed
-
-			if errlog != nil {
-				errlog.Println(j.err)
-			}
+			errlog.Print(j.err)
 		}
 	}()
 
 	if j.err = j.f(at); j.err != nil {
 		j.state = Failed
-
-		if errlog != nil {
-			errlog.Println(j.err)
-		}
+		errlog.Print(j.err)
 	} else {
 		j.state = Stopped
 	}

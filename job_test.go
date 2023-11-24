@@ -4,8 +4,6 @@ package scheduled
 
 import (
 	"errors"
-	"io"
-	"log"
 	"testing"
 	"time"
 
@@ -38,7 +36,7 @@ var (
 		return nil
 	}
 
-	errlog = log.New(io.Discard, "ERRO", 0)
+	errlog = &defaultLogger{}
 )
 
 func TestJob_run(t *testing.T) {
@@ -57,7 +55,7 @@ func TestJob_run(t *testing.T) {
 		s:    newTickerJob(time.Second, false),
 	}
 	j.init(now)
-	j.run(now, nil, nil)
+	j.run(now, &defaultLogger{}, &defaultLogger{})
 	a.Nil(j.Err()).
 		Equal(j.State(), Stopped).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
@@ -69,7 +67,7 @@ func TestJob_run(t *testing.T) {
 		s:    newTickerJob(time.Second, false),
 	}
 	j.init(now)
-	j.run(now, errlog, nil)
+	j.run(now, errlog, &defaultLogger{})
 	a.NotNil(j.Err()).
 		Equal(j.State(), Failed).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
@@ -95,7 +93,7 @@ func TestJob_run(t *testing.T) {
 		delay: true,
 	}
 	j.init(now)
-	j.run(now, nil, nil)
+	j.run(now, &defaultLogger{}, &defaultLogger{})
 	a.Nil(j.Err()).
 		Equal(j.State(), Stopped).
 		True(j.Delay()).
@@ -110,7 +108,7 @@ func TestJob_run(t *testing.T) {
 		delay: false,
 	}
 	j.init(now)
-	j.run(now, nil, nil)
+	j.run(now, &defaultLogger{}, &defaultLogger{})
 	a.Nil(j.Err()).
 		Equal(j.State(), Stopped).
 		Empty(j.Prev()).

@@ -1,0 +1,5 @@
+id: und
+messages:
+    - key: 'scheduled: start job %s at %s\n'
+      message:
+        msg: '在 %[2]s 运行计划任务 %[1]s\n'

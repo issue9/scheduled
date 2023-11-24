@@ -13,6 +13,7 @@ var (
 	_ encoding.TextMarshaler   = Stopped
 	s State                    = 1
 	_ encoding.TextUnmarshaler = &s
+	_ Logger                   = &defaultLogger{}
 )
 
 func TestMarshal(t *testing.T) {

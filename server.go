@@ -30,6 +30,14 @@ func NewServer(loc *time.Location, erro, info Logger) *Server {
 		loc = time.Local
 	}
 
+	if erro == nil {
+		erro = &defaultLogger{}
+	}
+
+	if info == nil {
+		info = &defaultLogger{}
+	}
+
 	return &Server{
 		jobs:          make([]*Job, 0, 100),
 		nextScheduled: make(chan struct{}, 1),
