@@ -33,7 +33,6 @@ type (
 
 	// Logger 日志接口
 	Logger interface {
-		Error(error) // 输出 error 对象到日志
 		Print(...interface{})
 		Printf(format string, v ...interface{})
 	}
