@@ -37,8 +37,8 @@ func TestMarshal(t *testing.T) {
 	a.Equal(s.String(), "<unknown>")
 
 	text, err := s.MarshalText()
-	a.Nil(text).Equal(err, localeutil.Error("invalid value"))
+	a.Nil(text).Equal(err, localeutil.Error("invalid state %d", s))
 
 	err = s.UnmarshalText([]byte("not-exists"))
-	a.Equal(err, localeutil.Error("invalid value"))
+	a.Equal(err, localeutil.Error("invalid state text %s", "not-exists"))
 }
