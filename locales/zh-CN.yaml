@@ -1,5 +1,11 @@
 id: und
 messages:
-    - key: 'scheduled: start job %s at %s\n'
+    - key: invalid state %d
       message:
-        msg: '在 %[2]s 运行计划任务 %[1]s\n'
+        msg: 无效的状态 %d
+    - key: invalid state text %s
+      message:
+        msg: 无效的状态字符串 %s
+    - key: 'scheduled: start job %s at %s'
+      message:
+        msg: 在 %[2]s 运行计划任务 %[1]s

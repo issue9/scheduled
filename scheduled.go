@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-//go:generate web locale -l=und -func=github.com/issue9/scheduled.Logger.Printf -m -f=yaml ./
+//go:generate web locale -l=und -func=github.com/issue9/localeutil.Phrase,github.com/issue9/localeutil.Error -m -f=yaml ./
 //go:generate web update-locale -src=./locales/und.yaml -dest=./locales/zh-CN.yaml
 
 // Package scheduled 个计划任务管理工具
@@ -15,7 +15,7 @@
 package scheduled
 
 import (
-	"fmt"
+	"github.com/issue9/localeutil"
 
 	"github.com/issue9/scheduled/schedulers"
 )
@@ -32,9 +32,14 @@ type (
 	SchedulerFunc = schedulers.SchedulerFunc
 
 	// Logger 日志接口
+	//
+	// NOTE: 同时实现了 [github.com/issue9/logs.Logger] 对象
 	Logger interface {
-		Print(...interface{})
-		Printf(format string, v ...interface{})
+		// Error 输出错误对象到日志
+		Error(error)
+
+		// LocaleString 输出本地化的内容到日志
+		LocaleString(localeutil.Stringer)
 	}
 
 	State int8
@@ -58,9 +63,7 @@ var (
 
 func (l *defaultLogger) Error(error) {}
 
-func (l *defaultLogger) Print(v ...interface{}) {}
-
-func (l *defaultLogger) Printf(format string, v ...interface{}) {}
+func (l *defaultLogger) LocaleString(localeutil.Stringer) {}
 
 func (s State) String() string {
 	v, found := stateStringMap[s]
@@ -71,18 +74,16 @@ func (s State) String() string {
 }
 
 func (s State) MarshalText() ([]byte, error) {
-	v, found := stateStringMap[s]
-	if found {
+	if v, found := stateStringMap[s]; found {
 		return []byte(v), nil
 	}
-	return nil, fmt.Errorf("无效的值 %v", s)
+	return nil, localeutil.Error("invalid state %d", s)
 }
 
 func (s *State) UnmarshalText(data []byte) error {
-	v, found := stringStateMap[string(data)]
-	if !found {
-		return fmt.Errorf("无效的值 %v", string(data))
+	if v, found := stringStateMap[string(data)]; found {
+		*s = v
+		return nil
 	}
-	*s = v
-	return nil
+	return localeutil.Error("invalid state text %s", string(data))
 }

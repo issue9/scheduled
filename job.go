@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/issue9/localeutil"
+
 	"github.com/issue9/scheduled/schedulers/at"
 	"github.com/issue9/scheduled/schedulers/cron"
 	"github.com/issue9/scheduled/schedulers/ticker"
@@ -81,7 +83,7 @@ func (j *Job) calcState(now time.Time) {
 
 // 运行当前的任务
 func (j *Job) run(at time.Time, errlog, infolog Logger) {
-	infolog.Printf("scheduled: start job %s at %s\n", j.Name(), at.String())
+	infolog.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.Name(), at.String()))
 
 	j.locker.Lock()
 	defer j.locker.Unlock()
@@ -94,13 +96,13 @@ func (j *Job) run(at time.Time, errlog, infolog Logger) {
 				j.err = fmt.Errorf("%v", msg)
 			}
 			j.state = Failed
-			errlog.Print(j.err)
+			errlog.Error(j.err)
 		}
 	}()
 
 	if j.err = j.f(at); j.err != nil {
 		j.state = Failed
-		errlog.Print(j.err)
+		errlog.Error(j.err)
 	} else {
 		j.state = Stopped
 	}

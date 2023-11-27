@@ -1,5 +1,11 @@
 id: und
 messages:
-    - key: 'scheduled: start job %s at %s\n'
+    - key: invalid state %d
       message:
-        msg: 'scheduled: start job %s at %s\n'
+        msg: invalid state %d
+    - key: invalid state text %s
+      message:
+        msg: invalid state text %s
+    - key: 'scheduled: start job %s at %s'
+      message:
+        msg: 'scheduled: start job %s at %s'

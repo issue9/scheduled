@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/issue9/assert/v3"
+	"github.com/issue9/localeutil"
 )
 
 var (
@@ -36,8 +37,8 @@ func TestMarshal(t *testing.T) {
 	a.Equal(s.String(), "<unknown>")
 
 	text, err := s.MarshalText()
-	a.Nil(text).ErrorString(err, "无效的值")
+	a.Nil(text).Equal(err, localeutil.Error("invalid value"))
 
 	err = s.UnmarshalText([]byte("not-exists"))
-	a.ErrorString(err, "无效的值")
+	a.Equal(err, localeutil.Error("invalid value"))
 }
