@@ -50,9 +50,9 @@ func TestJob_run(t *testing.T) {
 
 	now := time.Now()
 	j := &Job{
-		name: "succ",
-		f:    succFunc,
-		s:    newTickerJob(time.Second, false),
+		id: "succ",
+		f:  succFunc,
+		s:  newTickerJob(time.Second, false),
 	}
 	j.init(now)
 	j.run(now, &defaultLogger{}, &defaultLogger{})
@@ -62,9 +62,9 @@ func TestJob_run(t *testing.T) {
 
 	now = time.Now()
 	j = &Job{
-		name: "erro",
-		f:    erroFunc,
-		s:    newTickerJob(time.Second, false),
+		id: "erro",
+		f:  erroFunc,
+		s:  newTickerJob(time.Second, false),
 	}
 	j.init(now)
 	j.run(now, errlog, &defaultLogger{})
@@ -74,9 +74,9 @@ func TestJob_run(t *testing.T) {
 
 	now = time.Now()
 	j = &Job{
-		name: "fail",
-		f:    failFunc,
-		s:    newTickerJob(time.Second, false),
+		id: "fail",
+		f:  failFunc,
+		s:  newTickerJob(time.Second, false),
 	}
 	j.init(now)
 	j.run(now, errlog, errlog)
@@ -87,7 +87,7 @@ func TestJob_run(t *testing.T) {
 	// delay == true
 	now = time.Now()
 	j = &Job{
-		name:  "delay=true",
+		id:    "delay=true",
 		f:     delayFunc,
 		s:     newTickerJob(time.Second, false),
 		delay: true,
@@ -102,7 +102,7 @@ func TestJob_run(t *testing.T) {
 	// delay == false
 	now = time.Now()
 	j = &Job{
-		name:  "delay=false",
+		id:    "delay=false",
 		f:     delayFunc,
 		s:     newTickerJob(time.Second, false),
 		delay: false,
@@ -122,31 +122,31 @@ func TestSortJobs(t *testing.T) {
 	now := time.Now()
 	jobs := []*Job{
 		{
-			name: "1",
+			id:   "1",
 			next: now.Add(1111),
 		},
 		{
-			name: "2",
+			id:   "2",
 			next: time.Time{}, // zero 放在最后
 		},
 		{
-			name: "3",
+			id:   "3",
 			next: now,
 		},
 		{
-			name: "4",
+			id:   "4",
 			next: time.Time{}, // zero 放在最后
 		},
 		{
-			name: "5",
+			id:   "5",
 			next: now.Add(222),
 		},
 	}
 
 	sortJobs(jobs)
-	a.Equal(jobs[0].Name(), "3").
-		Equal(jobs[1].Name(), "5").
-		Equal(jobs[2].Name(), "1")
+	a.Equal(jobs[0].ID(), "3").
+		Equal(jobs[1].ID(), "5").
+		Equal(jobs[2].ID(), "1")
 }
 
 func TestServer_Jobs(t *testing.T) {

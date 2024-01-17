@@ -21,7 +21,7 @@ type JobFunc = func(time.Time) error
 // Job 定时任务
 type Job struct {
 	s     Scheduler
-	name  string
+	id    string
 	f     JobFunc
 	delay bool
 
@@ -34,37 +34,41 @@ type Job struct {
 	next   time.Time // 下一次可能执行的时间
 }
 
-// Name 任务的名称
-func (j *Job) Name() string { return j.name }
+// ID 用以区分任务的唯一 ID
+func (j *Job) ID() string { return j.id }
 
 // Next 返回下次执行的时间点
 //
 // 如果返回值的 IsZero() 为 true，则表示该任务不需要再执行。
-func (j *Job) Next() time.Time {
+func (j *Job) Next() (t time.Time) {
 	j.locker.RLock()
-	defer j.locker.RUnlock()
-	return j.next
+	t = j.next
+	j.locker.RUnlock()
+	return t
 }
 
 // Prev 当前正在执行或是上次执行的时间点
-func (j *Job) Prev() time.Time {
+func (j *Job) Prev() (t time.Time) {
 	j.locker.RLock()
-	defer j.locker.RUnlock()
-	return j.prev
+	t = j.prev
+	j.locker.RUnlock()
+	return t
 }
 
 // State 获取当前的状态
-func (j *Job) State() State {
+func (j *Job) State() (s State) {
 	j.locker.RLock()
-	defer j.locker.RUnlock()
-	return j.state
+	s = j.state
+	j.locker.RUnlock()
+	return
 }
 
 // Err 返回当前的错误信息
-func (j *Job) Err() error {
+func (j *Job) Err() (err error) {
 	j.locker.RLock()
-	defer j.locker.RUnlock()
-	return j.err
+	err = j.err
+	j.locker.RUnlock()
+	return err
 }
 
 // Delay 是否在延迟执行
@@ -83,7 +87,7 @@ func (j *Job) calcState(now time.Time) {
 
 // 运行当前的任务
 func (j *Job) run(at time.Time, errlog, infolog Logger) {
-	infolog.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.Name(), at.String()))
+	infolog.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.ID(), at.String()))
 
 	j.locker.Lock()
 	defer j.locker.Unlock()
@@ -118,6 +122,7 @@ func (j *Job) init(now time.Time) {
 }
 
 func sortJobs(jobs []*Job) {
+	// TODO(go1.21): 可以采用 slices.SortFunc
 	sort.SliceStable(jobs, func(i, j int) bool {
 		if jobs[i].next.IsZero() {
 			return false
@@ -140,8 +145,9 @@ func (s *Server) Jobs() []*Job {
 	jobs := make([]*Job, 0, len(s.jobs))
 	jobs = append(jobs, s.jobs...)
 
+	// TODO(go1.21): 可以采用 slices.SortFunc
 	sort.SliceStable(jobs, func(i, j int) bool {
-		return jobs[i].name < jobs[j].name
+		return jobs[i].id < jobs[j].id
 	})
 
 	return jobs
@@ -177,7 +183,7 @@ func (s *Server) At(name string, f JobFunc, t time.Time, delay bool) {
 func (s *Server) New(name string, f JobFunc, scheduler Scheduler, delay bool) {
 	job := &Job{
 		s:     scheduler,
-		name:  name,
+		id:    name,
 		f:     f,
 		delay: delay,
 	}
