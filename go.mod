@@ -7,4 +7,4 @@ require (
 
 require golang.org/x/text v0.14.0 // indirect
 
-go 1.18
+go 1.21

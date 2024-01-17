@@ -3,8 +3,9 @@
 package scheduled
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 	"time"
 
@@ -122,15 +123,14 @@ func (j *Job) init(now time.Time) {
 }
 
 func sortJobs(jobs []*Job) {
-	// TODO(go1.21): 可以采用 slices.SortFunc
-	sort.SliceStable(jobs, func(i, j int) bool {
-		if jobs[i].next.IsZero() {
-			return false
+	slices.SortFunc(jobs, func(i, j *Job) int {
+		if j.next.IsZero() {
+			return -1
 		}
-		if jobs[j].next.IsZero() {
-			return true
+		if i.next.IsZero() {
+			return 1
 		}
-		return jobs[i].next.Before(jobs[j].next)
+		return i.next.Compare(j.next)
 	})
 }
 
@@ -141,15 +141,8 @@ func (s *Server) Jobs() []*Job {
 	// NOTE: jobs 有顺序要求，如果直接返回给用户，
 	// 用户可能会对数据进行排序，造成无法使用，所以返回副本。
 
-	// TODO(go1.21): 可以采用 slices.Clone
-	jobs := make([]*Job, 0, len(s.jobs))
-	jobs = append(jobs, s.jobs...)
-
-	// TODO(go1.21): 可以采用 slices.SortFunc
-	sort.SliceStable(jobs, func(i, j int) bool {
-		return jobs[i].id < jobs[j].id
-	})
-
+	jobs := slices.Clone(s.jobs)
+	slices.SortFunc(jobs, func(i, j *Job) int { return cmp.Compare(i.id, j.id) })
 	return jobs
 }
 

@@ -95,12 +95,10 @@ func (s *Server) schedule(ctx context.Context) {
 
 	sortJobs(s.jobs) // 按执行时间进行排序
 
-	var dur time.Duration
 	now := time.Now()
 
-	if len(s.jobs) == 0 || s.jobs[0].Next().IsZero() {
-		dur = time.Minute
-	} else {
+	dur := time.Minute
+	if len(s.jobs) > 0 && !s.jobs[0].Next().IsZero() {
 		dur = s.jobs[0].Next().Sub(now)
 	}
 
