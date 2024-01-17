@@ -6,6 +6,9 @@ messages:
     - key: invalid state text %s
       message:
         msg: 无效的状态字符串 %s
+    - key: recover msg %v
+      message:
+        msg: 从 panic 中恢复的错误信息：%v
     - key: 'scheduled: start job %s at %s'
       message:
         msg: 在 %[2]s 运行计划任务 %[1]s

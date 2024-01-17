@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/issue9/assert/v3"
+	"github.com/issue9/localeutil"
 
 	"github.com/issue9/scheduled/schedulers"
 	"github.com/issue9/scheduled/schedulers/ticker"
@@ -50,9 +51,9 @@ func TestJob_run(t *testing.T) {
 
 	now := time.Now()
 	j := &Job{
-		id: "succ",
-		f:  succFunc,
-		s:  newTickerJob(time.Second, false),
+		title: localeutil.StringPhrase("succ"),
+		f:     succFunc,
+		s:     newTickerJob(time.Second, false),
 	}
 	j.init(now)
 	j.run(now, &defaultLogger{}, &defaultLogger{})
@@ -62,9 +63,9 @@ func TestJob_run(t *testing.T) {
 
 	now = time.Now()
 	j = &Job{
-		id: "erro",
-		f:  erroFunc,
-		s:  newTickerJob(time.Second, false),
+		title: localeutil.StringPhrase("erro"),
+		f:     erroFunc,
+		s:     newTickerJob(time.Second, false),
 	}
 	j.init(now)
 	j.run(now, errlog, &defaultLogger{})
@@ -74,9 +75,9 @@ func TestJob_run(t *testing.T) {
 
 	now = time.Now()
 	j = &Job{
-		id: "fail",
-		f:  failFunc,
-		s:  newTickerJob(time.Second, false),
+		title: localeutil.StringPhrase("fail"),
+		f:     failFunc,
+		s:     newTickerJob(time.Second, false),
 	}
 	j.init(now)
 	j.run(now, errlog, errlog)
@@ -87,7 +88,7 @@ func TestJob_run(t *testing.T) {
 	// delay == true
 	now = time.Now()
 	j = &Job{
-		id:    "delay=true",
+		title: localeutil.StringPhrase("delay=true"),
 		f:     delayFunc,
 		s:     newTickerJob(time.Second, false),
 		delay: true,
@@ -102,7 +103,7 @@ func TestJob_run(t *testing.T) {
 	// delay == false
 	now = time.Now()
 	j = &Job{
-		id:    "delay=false",
+		title: localeutil.StringPhrase("delay=false"),
 		f:     delayFunc,
 		s:     newTickerJob(time.Second, false),
 		delay: false,
@@ -122,31 +123,31 @@ func TestSortJobs(t *testing.T) {
 	now := time.Now()
 	jobs := []*Job{
 		{
-			id:   "1",
-			next: now.Add(1111),
+			title: localeutil.StringPhrase("1"),
+			next:  now.Add(1111),
 		},
 		{
-			id:   "2",
-			next: time.Time{}, // zero 放在最后
+			title: localeutil.StringPhrase("2"),
+			next:  time.Time{}, // zero 放在最后
 		},
 		{
-			id:   "3",
-			next: now,
+			title: localeutil.StringPhrase("3"),
+			next:  now,
 		},
 		{
-			id:   "4",
-			next: time.Time{}, // zero 放在最后
+			title: localeutil.StringPhrase("4"),
+			next:  time.Time{}, // zero 放在最后
 		},
 		{
-			id:   "5",
-			next: now.Add(222),
+			title: localeutil.StringPhrase("5"),
+			next:  now.Add(222),
 		},
 	}
 
 	sortJobs(jobs)
-	a.Equal(jobs[0].ID(), "3").
-		Equal(jobs[1].ID(), "5").
-		Equal(jobs[2].ID(), "1")
+	a.Equal(jobs[0].Title(), localeutil.StringPhrase("3")).
+		Equal(jobs[1].Title(), localeutil.StringPhrase("5")).
+		Equal(jobs[2].Title(), localeutil.StringPhrase("1"))
 }
 
 func TestServer_Jobs(t *testing.T) {
@@ -155,9 +156,9 @@ func TestServer_Jobs(t *testing.T) {
 	a.NotNil(srv)
 
 	now := time.Now()
-	srv.At("j1", succFunc, now, false)
-	srv.At("j3", succFunc, now, false)
-	srv.At("j2", succFunc, now, false)
+	srv.At(localeutil.StringPhrase("j1"), succFunc, now, false)
+	srv.At(localeutil.StringPhrase("j3"), succFunc, now, false)
+	srv.At(localeutil.StringPhrase("j2"), succFunc, now, false)
 
 	jobs := srv.Jobs()
 	a.Equal(len(jobs), len(srv.jobs))
@@ -167,8 +168,8 @@ func TestServer_Cron(t *testing.T) {
 	a := assert.New(t, false)
 
 	srv := NewServer(nil, nil, nil)
-	srv.Cron("test", nil, "* * * 3-7 * *", false)
+	srv.Cron(localeutil.StringPhrase("test"), nil, "* * * 3-7 * *", false)
 	a.Panic(func() {
-		srv.Cron("test", nil, "* * * 3-7a * *", false)
+		srv.Cron(localeutil.StringPhrase("test"), nil, "* * * 3-7a * *", false)
 	})
 }

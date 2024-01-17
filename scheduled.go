@@ -15,6 +15,8 @@
 package scheduled
 
 import (
+	"fmt"
+
 	"github.com/issue9/localeutil"
 
 	"github.com/issue9/scheduled/schedulers"
@@ -45,6 +47,10 @@ type (
 	State int8
 
 	defaultLogger struct{}
+
+	termLogger struct {
+		p *localeutil.Printer
+	}
 )
 
 var (
@@ -61,9 +67,16 @@ var (
 	}
 )
 
+// NewTermLogger 声明输出到终的日志
+func NewTermLogger(p *localeutil.Printer) Logger { return &termLogger{p: p} }
+
 func (l *defaultLogger) Error(error) {}
 
 func (l *defaultLogger) LocaleString(localeutil.Stringer) {}
+
+func (l *termLogger) Error(err error) { fmt.Println(err) }
+
+func (l *termLogger) LocaleString(s localeutil.Stringer) { fmt.Println(s.LocaleString(l.p)) }
 
 func (s State) String() string {
 	v, found := stateStringMap[s]

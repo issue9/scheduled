@@ -12,7 +12,7 @@ import (
 type Server struct {
 	jobs           []*Job
 	nextScheduled  chan struct{} // 需要指行下一次调度任务
-	exitSchedule   chan struct{} // 需要退出 Server.schedule 方法
+	exitSchedule   chan struct{} // 没有立即了执行的任务，则退出调度任务
 	scheduleLocker sync.Mutex
 
 	loc        *time.Location
@@ -77,7 +77,17 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 }
 
+// sendNextScheduled 立即触发一次任务调度
 func (s *Server) sendNextScheduled() {
+	// NOTE: sendNextScheduled 只在 schedule 和 Serve 中被调用，基本可以保证不会同时多次调用。
+
+	if len(s.exitSchedule) == 0 { // 让之前正在运行的 schedule 退出
+		s.exitSchedule <- struct{}{}
+	}
+	if len(s.exitSchedule) > 0 { // 拿回多余的 exitSchedule
+		<-s.exitSchedule
+	}
+
 	if len(s.nextScheduled) == 0 {
 		s.nextScheduled <- struct{}{}
 	}

@@ -6,6 +6,9 @@ messages:
     - key: invalid state text %s
       message:
         msg: invalid state text %s
+    - key: recover msg %v
+      message:
+        msg: recover msg %v
     - key: 'scheduled: start job %s at %s'
       message:
         msg: 'scheduled: start job %s at %s'

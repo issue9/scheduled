@@ -3,8 +3,6 @@
 package scheduled
 
 import (
-	"cmp"
-	"fmt"
 	"slices"
 	"sync"
 	"time"
@@ -22,7 +20,7 @@ type JobFunc = func(time.Time) error
 // Job 定时任务
 type Job struct {
 	s     Scheduler
-	id    string
+	title localeutil.Stringer
 	f     JobFunc
 	delay bool
 
@@ -35,8 +33,8 @@ type Job struct {
 	next   time.Time // 下一次可能执行的时间
 }
 
-// ID 用以区分任务的唯一 ID
-func (j *Job) ID() string { return j.id }
+// Title 简要描述信息
+func (j *Job) Title() localeutil.Stringer { return j.title }
 
 // Next 返回下次执行的时间点
 //
@@ -88,7 +86,7 @@ func (j *Job) calcState(now time.Time) {
 
 // 运行当前的任务
 func (j *Job) run(at time.Time, errlog, infolog Logger) {
-	infolog.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.ID(), at.String()))
+	go infolog.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.Title(), at.String()))
 
 	j.locker.Lock()
 	defer j.locker.Unlock()
@@ -98,10 +96,10 @@ func (j *Job) run(at time.Time, errlog, infolog Logger) {
 			if err, ok := msg.(error); ok {
 				j.err = err
 			} else {
-				j.err = fmt.Errorf("%v", msg)
+				j.err = localeutil.Error("recover msg %v", msg)
 			}
 			j.state = Failed
-			errlog.Error(j.err)
+			errlog.Error(j.err) // 不像 infolog 一样采用异步，可能会在执行过程中 j.err 被改值。
 		}
 	}()
 
@@ -142,41 +140,41 @@ func (s *Server) Jobs() []*Job {
 	// 用户可能会对数据进行排序，造成无法使用，所以返回副本。
 
 	jobs := slices.Clone(s.jobs)
-	slices.SortFunc(jobs, func(i, j *Job) int { return cmp.Compare(i.id, j.id) })
+	slices.SortFunc(jobs, func(i, j *Job) int { return i.next.Compare(j.next) })
 	return jobs
 }
 
 // Tick 添加一个新的定时任务
-func (s *Server) Tick(name string, f JobFunc, dur time.Duration, imm, delay bool) {
-	s.New(name, f, ticker.Tick(dur, imm), delay)
+func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, imm, delay bool) {
+	s.New(title, f, ticker.Tick(dur, imm), delay)
 }
 
 // Cron 使用 cron 表达式新建一个定时任务
 //
 // 具体文件可以参考 [cron.Parse]
-func (s *Server) Cron(name string, f JobFunc, spec string, delay bool) {
+func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string, delay bool) {
 	scheduler, err := cron.Parse(spec, s.Location())
 	if err != nil {
 		panic(err)
 	}
-	s.New(name, f, scheduler, delay)
+	s.New(title, f, scheduler, delay)
 }
 
 // At 添加 At 类型的定时器
 //
 // 具体文件可以参考 [at.At]
-func (s *Server) At(name string, f JobFunc, t time.Time, delay bool) {
-	s.New(name, f, at.At(t), delay)
+func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time, delay bool) {
+	s.New(title, f, at.At(t), delay)
 }
 
 // New 添加一个新的定时任务
 //
-// name 作为定时任务的一个简短描述，不作唯一要求；
+// title 任务的简要描述；
 // delay 是否从任务执行完之后，才开始计算下个执行的时间点。
-func (s *Server) New(name string, f JobFunc, scheduler Scheduler, delay bool) {
+func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, delay bool) {
 	job := &Job{
 		s:     scheduler,
-		id:    name,
+		title: title,
 		f:     f,
 		delay: delay,
 	}
@@ -184,7 +182,6 @@ func (s *Server) New(name string, f JobFunc, scheduler Scheduler, delay bool) {
 
 	if s.running { // 服务已经运行，则需要触发调度任务。
 		job.init(time.Now())
-		s.sendNextScheduled()
-		s.exitSchedule <- struct{}{}
+		s.sendNextScheduled() // 执行一次调度任务
 	}
 }

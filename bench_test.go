@@ -5,30 +5,32 @@ package scheduled
 import (
 	"testing"
 	"time"
+
+	"github.com/issue9/localeutil"
 )
 
 func BenchmarkSortJobs(b *testing.B) {
 	now := time.Now()
 	jobs := []*Job{
 		{
-			id:   "1",
-			next: now.Add(1111),
+			title: localeutil.StringPhrase("1"),
+			next:  now.Add(1111),
 		},
 		{
-			id:   "2",
-			next: time.Time{}, // zero 放在最后
+			title: localeutil.StringPhrase("2"),
+			next:  time.Time{}, // zero 放在最后
 		},
 		{
-			id:   "3",
-			next: now,
+			title: localeutil.StringPhrase("3"),
+			next:  now,
 		},
 		{
-			id:   "4",
-			next: time.Time{}, // zero 放在最后
+			title: localeutil.StringPhrase("4"),
+			next:  time.Time{}, // zero 放在最后
 		},
 		{
-			id:   "5",
-			next: now.Add(222),
+			title: localeutil.StringPhrase("5"),
+			next:  now.Add(222),
 		},
 	}
 

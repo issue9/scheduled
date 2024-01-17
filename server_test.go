@@ -11,32 +11,33 @@ import (
 	"time"
 
 	"github.com/issue9/assert/v3"
+	"github.com/issue9/localeutil"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 func TestServer_Serve(t *testing.T) {
 	a := assert.New(t, false)
-	srv := NewServer(nil, nil, nil)
+	term := NewTermLogger(message.NewPrinter(language.SimplifiedChinese))
+	srv := NewServer(nil, term, term)
 	a.NotNil(srv)
 
 	tickers1 := make([]time.Time, 0, 20)
 	tickers2 := make([]time.Time, 0, 20)
 	tickers3 := make([]time.Time, 0, 20)
 
-	srv.Tick("ticker1", func(t time.Time) error {
+	srv.Tick(localeutil.StringPhrase("ticker1-delay"), func(t time.Time) error {
 		tickers1 = append(tickers1, t)
-		println("ticker1", t.String())
 		return nil
 	}, time.Second, false, true)
 
-	srv.Tick("ticker2", func(t time.Time) error {
+	srv.Tick(localeutil.StringPhrase("ticker2-delay"), func(t time.Time) error {
 		tickers2 = append(tickers2, t)
-		println("ticker2", t.String())
 		return nil
 	}, 2*time.Second, false, true)
 
-	srv.Tick("ticker3", func(t time.Time) error {
+	srv.Tick(localeutil.StringPhrase("ticker3-imm-delay"), func(t time.Time) error {
 		tickers3 = append(tickers3, t)
-		println("ticker3-imm", t.String())
 		return nil
 	}, 2*time.Second, true, true)
 
@@ -85,7 +86,7 @@ func TestServer_Serve_empty(t *testing.T) {
 
 	tickers1 := make([]time.Time, 0, 20)
 
-	srv.Tick("empty-ticker1", func(t time.Time) error {
+	srv.Tick(localeutil.StringPhrase("empty-ticker1"), func(t time.Time) error {
 		tickers1 = append(tickers1, t)
 		println("empty-ticker1", t.String())
 		return nil
@@ -114,7 +115,7 @@ func TestServer_Serve_zero(t *testing.T) {
 
 	// zero 应该永远不会被执行。
 	tickers1 := make([]time.Time, 0, 20)
-	srv.New("zero-ticker1", func(t time.Time) error {
+	srv.New(localeutil.StringPhrase("zero-ticker1"), func(t time.Time) error {
 		tickers1 = append(tickers1, t)
 		println("zero-ticker1", t.String())
 		return nil
@@ -129,7 +130,7 @@ func TestServer_Serve_zero(t *testing.T) {
 	a.True(srv.running)
 
 	tickers2 := make([]time.Time, 0, 20)
-	srv.Tick("zero-ticker2", func(t time.Time) error {
+	srv.Tick(localeutil.StringPhrase("zero-ticker2"), func(t time.Time) error {
 		tickers2 = append(tickers2, t)
 		println("zero-ticker2", t.String())
 		return nil
@@ -154,7 +155,7 @@ func TestServer_Serve_delay(t *testing.T) {
 	a.NotNil(srv)
 
 	tickers1 := make([]time.Time, 0, 20)
-	srv.Tick("delay-ticker1", func(t time.Time) error {
+	srv.Tick(localeutil.StringPhrase("delay-ticker1"), func(t time.Time) error {
 		tickers1 = append(tickers1, t)
 		println("delay-ticker1", t.String())
 		time.Sleep(2 * time.Second)
@@ -162,7 +163,7 @@ func TestServer_Serve_delay(t *testing.T) {
 	}, time.Second, true, true)
 
 	tickers2 := make([]time.Time, 0, 20)
-	srv.Tick("delay-ticker2", func(t time.Time) error {
+	srv.Tick(localeutil.StringPhrase("delay-ticker2"), func(t time.Time) error {
 		tickers2 = append(tickers2, t)
 		println("delay-ticker2", t.String())
 		time.Sleep(2 * time.Second)
@@ -217,7 +218,7 @@ func TestServer_Serve_loc(t *testing.T) {
 	h, minute, s := now.Clock()
 	spec := fmt.Sprintf("%d %d %d %d %d *", s, minute, h, d, m)
 
-	srv.Cron("cron", job, spec, false)
+	srv.Cron(localeutil.StringPhrase("cron"), job, spec, false)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		srv.Serve(ctx)
