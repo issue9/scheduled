@@ -10,10 +10,11 @@ import (
 
 // Server 管理所有的定时任务
 type Server struct {
-	jobs           []*Job
-	nextScheduled  chan struct{} // 需要指行下一次调度任务
-	exitSchedule   chan struct{} // 没有立即了执行的任务，则退出调度任务
-	scheduleLocker sync.Mutex
+	jobs                []*Job
+	nextScheduled       chan struct{} // 需要指行下一次调度任务
+	exitSchedule        chan struct{} // 没有立即了执行的任务，则退出调度任务
+	scheduleLocker      sync.Mutex    // 保证 schedule 方法调用的唯一性
+	nextScheduledLocker sync.Mutex    // 保证 sendNextScheduled 方法调用的唯一性
 
 	loc        *time.Location
 	running    bool
@@ -72,34 +73,45 @@ func (s *Server) Serve(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-s.nextScheduled:
-			s.schedule(ctx)
+			if err := s.schedule(ctx); err != nil {
+				return err
+			}
 		}
 	}
 }
 
 // sendNextScheduled 立即触发一次任务调度
+//
+// clear 为 true 可以在触发之前确保前一次的调度任务已经退出。
 func (s *Server) sendNextScheduled() {
-	// NOTE: sendNextScheduled 只在 schedule 和 Serve 中被调用，基本可以保证不会同时多次调用。
+	s.nextScheduledLocker.Lock()
+	if len(s.nextScheduled) == 0 {
+		s.nextScheduled <- struct{}{} // 只在 sendNextScheduled 中写入，所以可以保证正常写入。
+	}
+	s.nextScheduledLocker.Unlock()
+}
+
+// sendNextScheduled 立即触发一次任务调度
+//
+// 如果有正在运行的 schedule，则会让其退出。
+func (s *Server) clearAndSendNextScheduled() {
+	s.nextScheduledLocker.Lock()
 
 	if len(s.exitSchedule) == 0 { // 让之前正在运行的 schedule 退出
-		s.exitSchedule <- struct{}{}
-	}
-	if len(s.exitSchedule) > 0 { // 拿回多余的 exitSchedule
-		<-s.exitSchedule
+		s.exitSchedule <- struct{}{} // 只在 sendNextScheduled 中写入，所以可以保证正常写入。
 	}
 
 	if len(s.nextScheduled) == 0 {
-		s.nextScheduled <- struct{}{}
+		s.nextScheduled <- struct{}{} // 只在 sendNextScheduled 中写入，所以可以保证正常写入。
 	}
+
+	s.nextScheduledLocker.Unlock()
 }
 
 // 调度计划任务
 //
-// 每完成一个计划任务时，都会调用此函数重新计算调度时间，
-// 并重新生成一个最近时间的定时器。如果上一个定时器还未结束，
-// 则会自动结束上一个定时器，schedule 会保证同一时间，
-// 只有一个函数实例在运行。
-func (s *Server) schedule(ctx context.Context) {
+// 每完成一个计划任务时，都会调用此函数重新计算调度时间，并重新生成一个最近时间的定时器。
+func (s *Server) schedule(ctx context.Context) error {
 	s.scheduleLocker.Lock()
 	defer s.scheduleLocker.Unlock()
 
@@ -117,16 +129,16 @@ func (s *Server) schedule(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
-				return
-			case <-timer.C:
-				s.sendNextScheduled()
-				return
+				return ctx.Err()
+			case <-timer.C: // 计时结束，表示 jobs 没有变化，直接跳至 LOOP 部分执行
+				goto LOOP
 			case <-s.exitSchedule:
-				return
+				return nil
 			}
 		}
 	}
 
+LOOP:
 	for _, j := range s.jobs {
 		if next := j.Next(); next.After(now) || next.IsZero() {
 			break
@@ -142,5 +154,11 @@ func (s *Server) schedule(ctx context.Context) {
 		go j.run(now, s.erro, s.info)
 	}
 
+	if len(s.exitSchedule) > 0 { // 退出前清空 exitSchedule
+		<-s.exitSchedule
+	}
+
 	s.sendNextScheduled()
+
+	return nil
 }
