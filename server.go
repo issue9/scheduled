@@ -154,7 +154,7 @@ LOOP:
 		go j.run(now, s.erro, s.info)
 	}
 
-	if len(s.exitSchedule) > 0 { // 退出前清空 exitSchedule
+	if len(s.exitSchedule) > 0 { // 在退出函数和执行 sendNextScheduled 清空 exitSchedule
 		<-s.exitSchedule
 	}
 

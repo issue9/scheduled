@@ -145,33 +145,34 @@ func (s *Server) Jobs() []*Job {
 }
 
 // Tick 添加一个新的定时任务
-func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, imm, delay bool) {
-	s.New(title, f, ticker.Tick(dur, imm), delay)
+func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, imm, delay bool) func() {
+	return s.New(title, f, ticker.Tick(dur, imm), delay)
 }
 
 // Cron 使用 cron 表达式新建一个定时任务
 //
 // 具体文件可以参考 [cron.Parse]
-func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string, delay bool) {
+func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string, delay bool) func() {
 	scheduler, err := cron.Parse(spec, s.Location())
 	if err != nil {
 		panic(err)
 	}
-	s.New(title, f, scheduler, delay)
+	return s.New(title, f, scheduler, delay)
 }
 
 // At 添加 At 类型的定时器
 //
 // 具体文件可以参考 [at.At]
-func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time, delay bool) {
-	s.New(title, f, at.At(t), delay)
+func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time, delay bool) func() {
+	return s.New(title, f, at.At(t), delay)
 }
 
 // New 添加一个新的定时任务
 //
 // title 任务的简要描述；
 // delay 是否从任务执行完之后，才开始计算下个执行的时间点。
-func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, delay bool) {
+// 返回一个删除当前任务的方法
+func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, delay bool) func() {
 	job := &Job{
 		s:     scheduler,
 		title: title,
@@ -182,6 +183,13 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, 
 
 	if s.running { // 服务已经运行，则需要触发调度任务。
 		job.init(time.Now())
+		s.clearAndSendNextScheduled() // 执行一次调度任务
+	}
+
+	return func() {
+		s.scheduleLocker.Lock()
+		s.jobs = slices.DeleteFunc(s.jobs, func(e *Job) bool { return e == job })
+		s.scheduleLocker.Unlock()
 		s.clearAndSendNextScheduled() // 执行一次调度任务
 	}
 }

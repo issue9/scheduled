@@ -158,10 +158,16 @@ func TestServer_Jobs(t *testing.T) {
 	now := time.Now()
 	srv.At(localeutil.StringPhrase("j1"), succFunc, now, false)
 	srv.At(localeutil.StringPhrase("j3"), succFunc, now, false)
-	srv.At(localeutil.StringPhrase("j2"), succFunc, now, false)
+	d := srv.At(localeutil.StringPhrase("j2"), succFunc, now, false)
 
 	jobs := srv.Jobs()
-	a.Equal(len(jobs), len(srv.jobs))
+	l := len(jobs)
+	a.Length(srv.jobs, l)
+
+	d()
+	jobs = srv.Jobs()
+	a.Equal(len(jobs), len(srv.jobs)).
+		Equal(l-1, len(jobs))
 }
 
 func TestServer_Cron(t *testing.T) {
