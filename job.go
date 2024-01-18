@@ -3,6 +3,7 @@
 package scheduled
 
 import (
+	"context"
 	"slices"
 	"sync"
 	"time"
@@ -145,14 +146,14 @@ func (s *Server) Jobs() []*Job {
 }
 
 // Tick 添加一个新的定时任务
-func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, imm, delay bool) func() {
+func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, imm, delay bool) context.CancelFunc {
 	return s.New(title, f, ticker.Tick(dur, imm), delay)
 }
 
 // Cron 使用 cron 表达式新建一个定时任务
 //
 // 具体文件可以参考 [cron.Parse]
-func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string, delay bool) func() {
+func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string, delay bool) context.CancelFunc {
 	scheduler, err := cron.Parse(spec, s.Location())
 	if err != nil {
 		panic(err)
@@ -163,7 +164,7 @@ func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string, delay b
 // At 添加 At 类型的定时器
 //
 // 具体文件可以参考 [at.At]
-func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time, delay bool) func() {
+func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time, delay bool) context.CancelFunc {
 	return s.New(title, f, at.At(t), delay)
 }
 
@@ -171,8 +172,8 @@ func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time, delay boo
 //
 // title 任务的简要描述；
 // delay 是否从任务执行完之后，才开始计算下个执行的时间点。
-// 返回一个删除当前任务的方法
-func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, delay bool) func() {
+// 返回一个取消当前任务的方法，同时会从列表中删除。
+func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, delay bool) context.CancelFunc {
 	job := &Job{
 		s:     scheduler,
 		title: title,
