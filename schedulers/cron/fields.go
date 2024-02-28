@@ -7,9 +7,10 @@ package cron
 import (
 	"fmt"
 	"math/bits"
-	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/issue9/sliceutil"
 )
 
 // 表示 cron 语法中每一个字段的数据
@@ -153,14 +154,8 @@ func parseField(typ int, field string) (fields, error) {
 		}
 	}
 
-	sort.SliceStable(list, func(i, j int) bool {
-		return list[i] < list[j]
-	})
-
-	for i := 1; i < len(list); i++ {
-		if list[i] == list[i-1] {
-			return 0, fmt.Errorf("重复的值 %d", list[i])
-		}
+	if indexes := sliceutil.Dup(list, func(i, j uint64) bool { return i == j }); len(indexes) > 0 {
+		return 0, fmt.Errorf("重复的值 %d", list[indexes[0]])
 	}
 
 	var ret fields

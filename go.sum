@@ -2,5 +2,7 @@ github.com/issue9/assert/v4 v4.1.1 h1:OhPE8SB8n/qZCNGLQa+6MQtr/B3oON0JAVj68k8jJl
 github.com/issue9/assert/v4 v4.1.1/go.mod h1:v7qDRXi7AsaZZNh8eAK2rkLJg5/clztqQGA1DRv9Lv4=
 github.com/issue9/localeutil v0.26.4 h1:rfBC3YAt9PLHXHc5unreZpYjlEt+xCnVOUr7QDAveiw=
 github.com/issue9/localeutil v0.26.4/go.mod h1:BJXJwcAT9CyyVZOlqfmq+B5FcPbqGxGjYnTYbVuiMM8=
+github.com/issue9/sliceutil v0.15.1 h1:mV1VlQSO5E8sh2ab6pypLg7TdgGZlDb30E8quli01xY=
+github.com/issue9/sliceutil v0.15.1/go.mod h1:ldun6sT4/bOJxuMtOXhtc6P7GCwE7L+avV86HNks7qk=
 golang.org/x/text v0.14.0 h1:ScX5w1eTa3QqT8oi6+ziP7dTV1S2+ALU0bI+0zXKWiQ=
 golang.org/x/text v0.14.0/go.mod h1:18ZOQIKpY8NJVqYksKHtTdi31H5itFRjB5/qKTNYzSU=
