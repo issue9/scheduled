@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2018-2024 caixw
+//
 // SPDX-License-Identifier: MIT
 
 // Package cron 实现了 [cron] 表达式的 [schedulers.Scheduler] 接口

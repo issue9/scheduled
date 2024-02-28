@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2018-2024 caixw
+//
 // SPDX-License-Identifier: MIT
 
 package cron
@@ -16,7 +18,9 @@ import (
 // 其它类型也各自占一个字段长度。
 //
 // 其中每个字段中，从 0 位到高位，每一位表示一个值，比如在秒字段中，
-//  0,1,7 表示为 ...10000011
+//
+//	0,1,7 表示为 ...10000011
+//
 // 如果是月份这种从 1 开始的，则其第一位永远是 0
 type fields uint64
 
@@ -86,10 +90,11 @@ func (fs fields) next(curr int, b bound, greater bool) (val int, c bool) {
 // 分析单个数字域内容
 //
 // field 可以是以下格式：
-//  *
-//  n1-n2
-//  n1,n2
-//  n1-n2,n3-n4,n5
+//
+//	*
+//	n1-n2
+//	n1,n2
+//	n1-n2,n3-n4,n5
 func parseField(typ int, field string) (fields, error) {
 	if field == "*" {
 		return asterisk, nil
