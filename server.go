@@ -23,7 +23,7 @@ type Server struct {
 	erro, info Logger
 }
 
-// NewServer 声明 Server 对象实例
+// NewServer 声明 [Server]
 //
 // loc 指定当前所采用的时区，若为 nil，则会采用 [time.Local] 的值；
 // erro 计划任务发生的错误，向此输出，可以为空，表示不输出；
