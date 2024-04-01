@@ -148,6 +148,8 @@ func (s *Server) Jobs() []*Job {
 }
 
 // Tick 添加一个新的定时任务
+//
+// imm 表示是否先执行一次任务，如果为 true，将会排在任务队列的前列，而不是立即执行！
 func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, imm, delay bool) context.CancelFunc {
 	return s.New(title, f, ticker.Tick(dur, imm), delay)
 }
