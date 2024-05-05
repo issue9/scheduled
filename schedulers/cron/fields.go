@@ -5,11 +5,11 @@
 package cron
 
 import (
-	"fmt"
 	"math/bits"
 	"strconv"
 	"strings"
 
+	"github.com/issue9/localeutil"
 	"github.com/issue9/sliceutil"
 )
 
@@ -113,7 +113,7 @@ func parseField(typ int, field string) (fields, error) {
 			}
 
 			if !b.valid(n) {
-				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n, b.min, b.max)
+				return 0, syntaxError(localeutil.Phrase("the value %d out of range [%d,%d]", n, b.min, b.max))
 			}
 
 			// 星期中的 7 替换成 0
@@ -137,11 +137,11 @@ func parseField(typ int, field string) (fields, error) {
 			}
 
 			if !b.valid(n1) {
-				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n1, b.min, b.max)
+				return 0, syntaxError(localeutil.Phrase("the value %d out of range [%d,%d]", n1, b.min, b.max))
 			}
 
 			if !b.valid(n2) {
-				return 0, fmt.Errorf("值 %d 超出范围：[%d,%d]", n2, b.min, b.max)
+				return 0, syntaxError(localeutil.Phrase("the value %d out of range [%d,%d]", n2, b.min, b.max))
 			}
 
 			for i := n1; i <= n2; i++ {
@@ -155,7 +155,7 @@ func parseField(typ int, field string) (fields, error) {
 	}
 
 	if indexes := sliceutil.Dup(list, func(i, j uint64) bool { return i == j }); len(indexes) > 0 {
-		return 0, fmt.Errorf("重复的值 %d", list[indexes[0]])
+		return 0, syntaxError(localeutil.Phrase("duplicate value %d", list[indexes[0]]))
 	}
 
 	var ret fields

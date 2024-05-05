@@ -1,5 +1,23 @@
 id: und
 messages:
+    - key: all items are asterisk
+      message:
+        msg: 所有项都是星号
+    - key: can not be empty
+      message:
+        msg: 不能为空
+    - key: cron syntax error %s
+      message:
+        msg: 语法错误： %s
+    - key: duplicate value %d
+      message:
+        msg: 重复的值 %d
+    - key: incorrect length
+      message:
+        msg: 错误的长度
+    - key: invalid direct %s
+      message:
+        msg: 无效的指令 %s
     - key: invalid state %d
       message:
         msg: 无效的状态 %d
@@ -12,3 +30,6 @@ messages:
     - key: 'scheduled: start job %s at %s'
       message:
         msg: 在 %[2]s 运行计划任务 %[1]s
+    - key: the value %d out of range [%d,%d]
+      message:
+        msg: 值 %d 超出了范围 [%d,%d]

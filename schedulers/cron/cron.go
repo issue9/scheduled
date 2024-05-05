@@ -8,10 +8,10 @@
 package cron
 
 import (
-	"errors"
 	"strings"
 	"time"
 
+	"github.com/issue9/localeutil"
 	"github.com/issue9/scheduled/schedulers"
 	"github.com/issue9/scheduled/schedulers/at"
 )
@@ -78,20 +78,20 @@ type cron struct {
 func Parse(spec string, loc *time.Location) (schedulers.Scheduler, error) {
 	switch {
 	case spec == "":
-		return nil, errors.New("参数 spec 不能为空")
+		return nil, syntaxError(localeutil.Phrase("can not be empty"))
 	case spec == "@reboot":
 		return at.At(time.Now()), nil
 	case spec[0] == '@':
 		d, found := direct[spec]
 		if !found {
-			return nil, errors.New("未找到指令:" + spec)
+			return nil, syntaxError(localeutil.Phrase("invalid direct %s", spec))
 		}
 		spec = d
 	}
 
 	fs := strings.Fields(spec)
 	if len(fs) != indexSize {
-		return nil, errors.New("长度不正确")
+		return nil, syntaxError(localeutil.Phrase("incorrect length"))
 	}
 
 	c := &cron{
@@ -118,8 +118,12 @@ func Parse(spec string, loc *time.Location) (schedulers.Scheduler, error) {
 	}
 
 	if allAny { // 所有项都为 *
-		return nil, errors.New("所有项都为 *")
+		return nil, syntaxError(localeutil.Phrase("all items are asterisk"))
 	}
 
 	return c, nil
+}
+
+func syntaxError(s localeutil.Stringer) error {
+	return localeutil.Error("cron syntax error %s", s)
 }

@@ -1,5 +1,23 @@
 id: und
 messages:
+    - key: all items are asterisk
+      message:
+        msg: all items are asterisk
+    - key: can not be empty
+      message:
+        msg: can not be empty
+    - key: cron syntax error %s
+      message:
+        msg: cron syntax error %s
+    - key: duplicate value %d
+      message:
+        msg: duplicate value %d
+    - key: incorrect length
+      message:
+        msg: incorrect length
+    - key: invalid direct %s
+      message:
+        msg: invalid direct %s
     - key: invalid state %d
       message:
         msg: invalid state %d
@@ -12,3 +30,6 @@ messages:
     - key: 'scheduled: start job %s at %s'
       message:
         msg: 'scheduled: start job %s at %s'
+    - key: the value %d out of range [%d,%d]
+      message:
+        msg: the value %d out of range [%d,%d]
