@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 //go:generate web locale -l=und -func=github.com/issue9/localeutil.Phrase,github.com/issue9/localeutil.Error -m -f=yaml ./
-//go:generate web update-locale -src=./locales/und.yaml -dest=./locales/zh-CN.yaml
+//go:generate web update-locale -src=./locales/und.yaml -dest=./locales/cmn-Hans.yaml
 
 // Package scheduled 个计划任务管理工具
 //
