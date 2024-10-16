@@ -1,4 +1,6 @@
-id: cmn-Hans
+languages:
+    - cmn-Hans
+    - zh-Hans
 messages:
     - key: all items are asterisk
       message:
