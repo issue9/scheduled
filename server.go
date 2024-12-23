@@ -78,13 +78,12 @@ func (s *Server) Serve(ctx context.Context) error {
 			if err := s.schedule(ctx); err != nil {
 				return err
 			}
+			s.sendNextScheduled()
 		}
 	}
 }
 
 // sendNextScheduled 立即触发一次任务调度
-//
-// clear 为 true 可以在触发之前确保前一次的调度任务已经退出。
 func (s *Server) sendNextScheduled() {
 	s.nextScheduledLocker.Lock()
 	if len(s.nextScheduled) == 0 {
@@ -93,7 +92,7 @@ func (s *Server) sendNextScheduled() {
 	s.nextScheduledLocker.Unlock()
 }
 
-// sendNextScheduled 立即触发一次任务调度
+// clearAndSendNextScheduled 清除现在有任务并立即触发一次任务调度
 //
 // 如果有正在运行的 schedule，则会让其退出。
 func (s *Server) clearAndSendNextScheduled() {
@@ -131,10 +130,12 @@ func (s *Server) schedule(ctx context.Context) error {
 		for {
 			select {
 			case <-ctx.Done():
+				timer.Stop()
 				return ctx.Err()
 			case <-timer.C: // 计时结束，表示 jobs 没有变化，直接跳至 LOOP 部分执行
 				goto LOOP
 			case <-s.exitSchedule:
+				timer.Stop()
 				return nil
 			}
 		}
@@ -156,11 +157,9 @@ LOOP:
 		go j.run(now, s.erro, s.info)
 	}
 
-	if len(s.exitSchedule) > 0 { // 在退出函数和执行 sendNextScheduled 清空 exitSchedule
+	if len(s.exitSchedule) > 0 { // 在退出函数和执行 sendNextScheduled 之前清空 exitSchedule
 		<-s.exitSchedule
 	}
-
-	s.sendNextScheduled()
 
 	return nil
 }
