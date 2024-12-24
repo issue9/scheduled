@@ -193,8 +193,8 @@ func TestServer_Serve_delay(t *testing.T) {
 	for i := 1; i < len(tickers2); i++ {
 		prev := tickers2[i-1].Unix()
 		curr := tickers2[i].Unix()
-		delta := math.Abs(float64(curr - prev)) // 缺失一次执行，应该介于 4-6 之间？
-		a.True(delta >= 4 && delta < 6, "v1=%d, v2=%d", prev, curr)
+		delta := math.Abs(float64(curr - prev))
+		a.True(delta <= 3, "v1=%d, v2=%d", prev, curr) // 进入队列即开始计算
 	}
 }
 

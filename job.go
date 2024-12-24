@@ -188,13 +188,10 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, 
 
 	if s.running { // 服务已经运行，则需要触发调度任务。
 		job.init(time.Now())
-		s.clearAndSendNextScheduled() // 执行一次调度任务
+		s.schedule <- struct{}{} // 执行一次调度任务
 	}
 
 	return func() {
-		s.scheduleLocker.Lock()
 		s.jobs = slices.DeleteFunc(s.jobs, func(e *Job) bool { return e == job })
-		s.scheduleLocker.Unlock()
-		s.clearAndSendNextScheduled() // 执行一次调度任务
 	}
 }
