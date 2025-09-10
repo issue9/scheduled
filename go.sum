@@ -1,8 +1,8 @@
 github.com/issue9/assert/v4 v4.3.1 h1:dHYODk1yV7j/1baIB6K6UggI4r1Hfuljqic7PaDbwLg=
 github.com/issue9/assert/v4 v4.3.1/go.mod h1:v7qDRXi7AsaZZNh8eAK2rkLJg5/clztqQGA1DRv9Lv4=
-github.com/issue9/localeutil v0.30.1 h1:9xdV2rMX2K7VKx55vEmOvnOFusnvj631vkIk6AYgvVM=
-github.com/issue9/localeutil v0.30.1/go.mod h1:8M3yiqx6P5drz7HuLXJ6pczXiuGg4YcNyw/6xdH4fRQ=
+github.com/issue9/localeutil v0.31.0 h1:drk6C/qPWE13xhScti3tFR/hZ/z8UKyPDotR+dOwBRw=
+github.com/issue9/localeutil v0.31.0/go.mod h1:jNMs8rE983YWHIVmE/vbhR5rQRzbIhzv9hDpwUCAE+Q=
 github.com/issue9/sliceutil v0.17.0 h1:EtmVlldkAyGxS0O2TnxcAu3pgLJw74I5eh9DHT7TOZs=
 github.com/issue9/sliceutil v0.17.0/go.mod h1:CVpH4f228pICY7JImlztUPe/zf2w0EicEleU9YfFe00=
-golang.org/x/text v0.25.0 h1:qVyWApTSYLk/drJRO5mDlNYskwQznZmkpV2c8q9zls4=
-golang.org/x/text v0.25.0/go.mod h1:WEdwpYrmk1qmdHvhkSTNPm3app7v4rsT8F2UD6+VHIA=
+golang.org/x/text v0.29.0 h1:1neNs90w9YzJ9BocxfsQNHKuAT4pkghyXc4nhZ6sJvk=
+golang.org/x/text v0.29.0/go.mod h1:7MhJOA9CD2qZyOKYazxdYMF85OwPdEr9jTtBpO7ydH4=
