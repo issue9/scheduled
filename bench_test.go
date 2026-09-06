@@ -36,7 +36,7 @@ func BenchmarkSortJobs(b *testing.B) {
 		},
 	}
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		sortJobs(jobs)
 		jobs[0], jobs[2] = jobs[2], jobs[0]
 	}
