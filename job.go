@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2018-2024 caixw
+// SPDX-FileCopyrightText: 2018-2026 caixw
 //
 // SPDX-License-Identifier: MIT
 
@@ -6,6 +6,7 @@ package scheduled
 
 import (
 	"context"
+	"iter"
 	"slices"
 	"sync"
 	"time"
@@ -138,13 +139,14 @@ func sortJobs(jobs []*Job) {
 // Jobs 返回所有注册的任务
 //
 // 返回的是当前状态下的副本，具有时效性。
-func (s *Server) Jobs() []*Job {
-	// NOTE: jobs 有顺序要求，如果直接返回给用户，
-	// 用户可能会对数据进行排序，造成无法使用，所以返回副本。
-
-	jobs := slices.Clone(s.jobs)
-	slices.SortFunc(jobs, func(i, j *Job) int { return i.next.Compare(j.next) })
-	return jobs
+func (s *Server) Jobs() iter.Seq[*Job] {
+	return func(yield func(*Job) bool) {
+		for _, job := range s.jobs {
+			if !yield(job) {
+				break
+			}
+		}
+	}
 }
 
 // Tick 添加一个新的定时任务

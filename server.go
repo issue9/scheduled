@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2018-2024 caixw
+// SPDX-FileCopyrightText: 2018-2026 caixw
 //
 // SPDX-License-Identifier: MIT
 
@@ -82,7 +82,7 @@ LOOP:
 
 			sortJobs(s.jobs)
 			dur := s.jobs[0].Next().Sub(now)
-			if dur > 0 { //
+			if dur > 0 {
 				select {
 				case <-ctx.Done():
 					return ctx.Err()

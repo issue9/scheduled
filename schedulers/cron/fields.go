@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2018-2024 caixw
+// SPDX-FileCopyrightText: 2018-2026 caixw
 //
 // SPDX-License-Identifier: MIT
 
@@ -59,9 +59,10 @@ func (b bound) valid(v int) bool { return v >= b.min && v <= b.max }
 // val 返回计算后的最近一个时间值；
 // c 是否需要下一个值进位。
 func (fs fields) next(curr int, b bound, greater bool) (val int, c bool) {
-	if fs == asterisk { // asterisk 表示对当前值没有要求，不需要增加值。
+	switch fs {
+	case asterisk: // asterisk 表示对当前值没有要求，不需要增加值。
 		return curr, greater
-	} else if fs == step {
+	case step:
 		if greater {
 			curr++
 		}
@@ -125,13 +126,13 @@ func parseField(typ int, field string) (fields, error) {
 			continue
 		}
 
-		index := strings.IndexByte(v, '-')
-		if index >= 0 {
-			n1, err := strconv.Atoi(v[:index])
+		before, after, ok := strings.Cut(v, "-")
+		if ok {
+			n1, err := strconv.Atoi(before)
 			if err != nil {
 				return 0, err
 			}
-			n2, err := strconv.Atoi(v[index+1:])
+			n2, err := strconv.Atoi(after)
 			if err != nil {
 				return 0, err
 			}
