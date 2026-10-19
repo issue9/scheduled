@@ -5,7 +5,6 @@
 package cron
 
 import (
-	"math"
 	"testing"
 	"time"
 
@@ -15,16 +14,6 @@ import (
 )
 
 var _ schedulers.Scheduler = &cron{}
-
-// 2**y1 + 2**y2 + 2**y3 ...
-func pow2(y ...uint64) fields {
-	var p float64
-
-	for _, yy := range y {
-		p += math.Pow(2, float64(yy))
-	}
-	return fields(p)
-}
 
 func TestReboot(t *testing.T) {
 	a := assert.New(t, false)
@@ -48,27 +37,27 @@ func TestParse(t *testing.T) {
 	exprs := []*test{
 		{
 			expr: "1-3,10,9 * 3-7 * * 1",
-			vals: []fields{pow2(1, 2, 3, 10, 9), step, pow2(3, 4, 5, 6, 7), step, step, pow2(1)},
+			vals: []fields{1<<1 + 1<<2 + 1<<3 + 1<<10 + 1<<9, step, 1<<3 + 1<<4 + 1<<5 + 1<<6 + 1<<7, step, step, 1 << 1},
 		},
 		{
 			expr: "* * * * * 1",
-			vals: []fields{asterisk, asterisk, asterisk, asterisk, asterisk, pow2(1)},
+			vals: []fields{asterisk, asterisk, asterisk, asterisk, asterisk, 1 << 1},
 		},
 		{
 			expr: "* * * * * 0",
-			vals: []fields{asterisk, asterisk, asterisk, asterisk, asterisk, pow2(0)},
+			vals: []fields{asterisk, asterisk, asterisk, asterisk, asterisk, 1 << 0},
 		},
 		{
 			expr: "* * * * * 6",
-			vals: []fields{asterisk, asterisk, asterisk, asterisk, asterisk, pow2(6)},
+			vals: []fields{asterisk, asterisk, asterisk, asterisk, asterisk, 1 << 6},
 		},
 		{
 			expr: "* 3 * * * 6",
-			vals: []fields{asterisk, pow2(3), step, step, step, pow2(6)},
+			vals: []fields{asterisk, 1 << 3, step, step, step, 1 << 6},
 		},
 		{
 			expr: "@daily",
-			vals: []fields{pow2(0), pow2(0), pow2(0), step, step, step},
+			vals: []fields{1 << 0, 1 << 0, 1 << 0, step, step, step},
 		},
 		{ // 参数错误
 			expr:   "",

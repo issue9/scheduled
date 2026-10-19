@@ -29,49 +29,49 @@ func TestParseField(t *testing.T) {
 		{
 			typ:   secondIndex,
 			field: "2",
-			vals:  pow2(2),
+			vals:  1 << 2,
 		},
 		{
 			typ:   secondIndex,
 			field: "1,2",
-			vals:  pow2(1, 2),
+			vals:  1<<1 + 1<<2,
 		},
 		{
 			typ:   secondIndex,
 			field: "1,2,4,7,",
-			vals:  pow2(1, 2, 4, 7),
+			vals:  1<<1 + 1<<2 + 1<<4 + 1<<7,
 		},
 		{
 			typ:   secondIndex,
 			field: "0-4",
-			vals:  pow2(0, 1, 2, 3, 4),
+			vals:  1<<0 + 1<<1 + 1<<2 + 1<<3 + 1<<4,
 		},
 		{
 			typ:   monthIndex,
 			field: "1-4",
-			vals:  pow2(1, 2, 3, 4),
+			vals:  1<<1 + 1<<2 + 1<<3 + 1<<4,
 		},
 		{
 			typ:   secondIndex,
 			field: "1-2",
-			vals:  pow2(1, 2),
+			vals:  1<<1 + 1<<2,
 		},
 		{
 			typ:   secondIndex,
 			field: "1-4,9",
-			vals:  pow2(1, 2, 3, 4, 9),
+			vals:  1<<1 + 1<<2 + 1<<3 + 1<<4 + 1<<9,
 		},
 		{
 			typ:   dayIndex,
 			field: "31",
-			vals:  pow2(31),
+			vals:  1 << 31,
 		},
 
 		// week 相关的测试
 		{
 			typ:   weekIndex,
 			field: "7",
-			vals:  pow2(0),
+			vals:  1 << 0,
 		},
 		{ // 0 与 7 是相同的值
 			typ:    weekIndex,
@@ -86,13 +86,13 @@ func TestParseField(t *testing.T) {
 		{
 			typ:   weekIndex,
 			field: "5-7",
-			vals:  pow2(0, 5, 6),
+			vals:  1<<0 + 1<<5 + 1<<6,
 		},
 
 		{
 			typ:   secondIndex,
 			field: "1-4,9,19-21",
-			vals:  pow2(1, 2, 3, 4, 9, 19, 20, 21),
+			vals:  1<<1 + 1<<2 + 1<<3 + 1<<4 + 1<<9 + 1<<19 + 1<<20 + 1<<21,
 		},
 
 		{ // 超出范围，月份从 1 开始
@@ -155,7 +155,7 @@ func TestParseField(t *testing.T) {
 	}
 }
 
-func TestBits_next(t *testing.T) {
+func TestFields_next(t *testing.T) {
 	a := assert.New(t, false)
 
 	type test struct {
@@ -174,7 +174,7 @@ func TestBits_next(t *testing.T) {
 		{
 			typ:   secondIndex,
 			curr:  0,
-			bits:  pow2(1, 3, 5),
+			bits:  1<<1 + 1<<3 + 1<<5,
 			carry: true,
 			v:     1,
 			c:     false,
@@ -183,7 +183,7 @@ func TestBits_next(t *testing.T) {
 		{
 			typ:   secondIndex,
 			curr:  1,
-			bits:  pow2(1, 3, 5),
+			bits:  1<<1 + 1<<3 + 1<<5,
 			carry: false,
 			v:     1,
 			c:     false,
@@ -192,7 +192,7 @@ func TestBits_next(t *testing.T) {
 		{
 			typ:   secondIndex,
 			curr:  1,
-			bits:  pow2(1, 3, 5),
+			bits:  1<<1 + 1<<3 + 1<<5,
 			carry: true,
 			v:     3,
 			c:     false,
@@ -201,7 +201,7 @@ func TestBits_next(t *testing.T) {
 		{
 			typ:   secondIndex,
 			curr:  5,
-			bits:  pow2(1, 3, 5),
+			bits:  1<<1 + 1<<3 + 1<<5,
 			carry: false,
 			v:     5,
 			c:     false,
@@ -237,7 +237,7 @@ func TestBits_next(t *testing.T) {
 		{
 			typ:   secondIndex,
 			curr:  5,
-			bits:  pow2(1, 3, 5),
+			bits:  1<<1 + 1<<3 + 1<<5,
 			carry: true,
 			v:     1,
 			c:     true,
@@ -300,7 +300,7 @@ func TestBits_next(t *testing.T) {
 		{
 			typ:   dayIndex,
 			curr:  4,
-			bits:  pow2(1, 3, 4, 7),
+			bits:  1<<1 + 1<<3 + 1<<4 + 1<<7,
 			carry: true,
 			v:     7,
 			c:     false,
