@@ -26,8 +26,14 @@ var (
 	weekdayBound = bound[time.Weekday]{min: time.Sunday, max: time.Saturday}
 	monthBound   = bound[time.Month]{min: time.January, max: time.December}
 	yearBound    = bound[int]{min: minYear, max: maxYear}
+	dayBound     = bound[int]{min: 1, max: 31} // 每个月的日期范围
 )
 
 func buildMonthDayBound(month time.Month, year int) bound[int] {
 	return bound[int]{min: 1, max: getMonthDays(month, year)}
+}
+
+func (b bound[T]) valid(v int) bool {
+	t := T(v)
+	return t >= b.min && (b.max == -1 || t <= b.max)
 }
