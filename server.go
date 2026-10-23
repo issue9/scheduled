@@ -60,7 +60,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	}()
 
 	// 初始化任务
-	now := time.Now()
+	now := time.Now().In(s.Location())
 	for _, job := range s.jobs {
 		job.init(now)
 	}

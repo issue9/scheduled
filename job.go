@@ -14,7 +14,7 @@ import (
 	"github.com/issue9/localeutil"
 
 	"github.com/issue9/scheduled/schedulers/at"
-	"github.com/issue9/scheduled/schedulers/cron"
+	"github.com/issue9/scheduled/schedulers/every"
 	"github.com/issue9/scheduled/schedulers/ticker"
 )
 
@@ -158,13 +158,9 @@ func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, i
 
 // Cron 使用 cron 表达式新建一个定时任务
 //
-// 具体文件可以参考 [cron.Parse]
+// 具体文件可以参考 [every.ParseCron]
 func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string, delay bool) context.CancelFunc {
-	scheduler, err := cron.Parse(spec, s.Location())
-	if err != nil {
-		panic(err)
-	}
-	return s.New(title, f, scheduler, delay)
+	return s.New(title, f, every.FromCron(spec), delay)
 }
 
 // At 添加 At 类型的定时器
