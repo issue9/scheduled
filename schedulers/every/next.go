@@ -15,23 +15,30 @@ import (
 func next(
 	value time.Time, years []int, months []time.Month, weekdays []time.Weekday, days, hours, minutes, seconds []int,
 ) time.Time {
-	second, carry := nextValue(seconds, secondBound, true, value.Second())
-	minute, carry := nextValue(minutes, minuteBound, carry, value.Minute())
-	hour, carry := nextValue(hours, hourBound, carry, value.Hour())
+	second, minSecond, carrySecond := nextValue(seconds, secondBound, true, value.Second())
+	minute, minMinute, carryMinute := nextValue(minutes, minuteBound, carrySecond, value.Minute())
+	if carryMinute || minute != value.Minute() {
+		second = minSecond
+	}
+	hour, _, carryHour := nextValue(hours, hourBound, carryMinute, value.Hour())
+	if carryHour || hour != value.Hour() {
+		minute = minMinute
+	}
 
 	var (
 		year, day int
 		month     time.Month
 	)
 	if len(weekdays) > 0 {
-		year, month, day = nextWeekDay(years, months, weekdays, days, value, carry)
+		year, month, day = nextWeekDay(years, months, weekdays, days, value, carryHour)
 	} else {
-		year, month, day = nextMonthDay(years, months, days, value, carry)
+		year, month, day = nextMonthDay(years, months, days, value, carryHour)
 	}
 
-	if year == 0 && month == 0 && day == 0 {
+	if (year == 0 && month == 0 && day == 0) || year > maxYear {
 		return time.Time{}
 	}
+
 	return time.Date(year, month, day, hour, minute, second, 0, value.Location())
 }
 
@@ -46,19 +53,36 @@ func nextMonthDay(
 ) (year int, month time.Month, day int) {
 	dayBound := buildMonthDayBound(value.Month(), value.Year())
 
-	day, carry = nextValue(days, dayBound, carry, value.Day())
+	day, minDay, carryDay := nextValue(days, dayBound, carry, value.Day())
 
-	// 如果 day 没有进位，那么不需要重新计算 month，直接使用 value.Month 就行，year 也是如此。
-
-	if !carry && (len(months) == 0 || slices.Contains(months, value.Month())) {
+	// 如果 day 没有进位，那么不需要重新计算 month 和 year，直接使用 value 中对应的值就行。
+	if !carryDay &&
+		(len(months) == 0 || slices.Contains(months, value.Month())) &&
+		(len(years) == 0 || slices.Contains(years, value.Year())) {
 		month = value.Month()
-	} else {
-		month, carry = nextValue(months, monthBound, carry, value.Month())
-	}
-	if !carry && (len(years) == 0 || slices.Contains(years, value.Year())) {
 		year = value.Year()
 	} else {
-		year, carry = nextValue(years, yearBound, carry, value.Year())
+		var carryMonth bool
+		var minMonth time.Month
+		month, minMonth, carryMonth = nextValue(months, monthBound, carryDay, value.Month())
+		if carryMonth || month != value.Month() {
+			day = minDay
+		}
+
+		// 如果 month 没有进位，那么不需要重新计算 year，直接使用 value.Year 就行。
+		if !carryMonth && (len(years) == 0 || slices.Contains(years, value.Year())) {
+			year = value.Year()
+		} else {
+			var carryYear bool
+			year, _, carryYear = nextValue(years, yearBound, carryMonth, value.Year())
+			if carryYear { // 已经没有可用的年份了
+				return 0, 0, 0
+			}
+			if year != value.Year() {
+				month = minMonth
+				day = minDay
+			}
+		}
 	}
 
 	// 由于月份中的天数不固定，还得计算该天数是否存在于当前月分，
@@ -77,10 +101,16 @@ func nextMonthDay(
 			day = 1
 		}
 
-		month, carry = nextValue(months, monthBound, false, month)
-		if carry { // 如果计算月份产生了进位，还需要重新计算年份。
-			year, carry = nextValue(years, yearBound, carry, year)
-			if carry { // 如果出来的年份还需要进位，则表示已经起出范围了，直接返回零值。
+		var minMonth time.Month
+		var carryMonth, carryYear bool
+		month, minMonth, carryMonth = nextValue(months, monthBound, true, month)
+		if carryMonth { // 如果计算月份产生了进位，还需要重新计算年份。
+			year, _, carryYear = nextValue(years, yearBound, carryMonth, year)
+			if year != value.Year() || carryYear {
+				month = minMonth
+			}
+
+			if carryYear { // 如果出来的年份还需要进位，则表示已经起出范围了，直接返回零值。
 				return 0, 0, 0
 			}
 		}
@@ -94,36 +124,55 @@ func nextMonthDay(
 func nextWeekDay(
 	years []int, months []time.Month, weekdays []time.Weekday, days []int, value time.Time, carry bool,
 ) (year int, month time.Month, day int) {
-	// 计算 week day 在当前月份中的日期
-	wday, ca := nextValue(weekdays, weekdayBound, carry, value.Weekday())
+	// 计算 week day 在当前月份中的日期，getMonthWeekDay 是获取第一个相符的日期，与此功能稍有不同
+	wday, _, ca := nextValue(weekdays, weekdayBound, carry, value.Weekday())
 	dur := wday - value.Weekday() // 相差的天数
 	if (dur < 0) || (ca && dur == 0) {
 		dur += 7
 	}
 	day = int(dur) + int(value.Day()) // wday 在当前月对应的天数
-	year = value.Year()
 
-	// 此处忽略返回的 c 参数。参数 carry 为 false，则肯定不会返回值为 true 的 carry
-	month, _ = nextValue(months, monthBound, false, value.Month())
-	if month != value.Month() {
-		day = getMonthWeekDay(wday, month, year)
-	} else if days := getMonthDays(month, year); day > days {
-		// 跨月份，还有可能跨年份
-		month, ca = nextValue(months, monthBound, true, month)
-		if ca {
-			year++
+	month, minMonth, carryMonth := nextValue(months, monthBound, false, value.Month())
+	year, _, carryYear := nextValue(years, yearBound, carryMonth, value.Year())
+	weekdayValid := !carryYear
+	if weekdayValid {
+		if year != value.Year() { // 年份改了，重置 month
+			month = minMonth
 		}
-		day = getMonthWeekDay(wday, month, year)
+
+		// month 或 year 发生变化，要重新计算 day
+		if month != value.Month() || year != value.Year() {
+			day = firstWeekDay(weekdays, month, year)
+		}
+
+		// day 不存在于当前月份，比如 30 号不存在于 2 月分。
+		for day > getMonthDays(month, year) {
+			// 跨月份，还有可能跨年份
+			month, minMonth, carryMonth = nextValue(months, monthBound, true, month)
+			year, _, carryYear = nextValue(years, yearBound, carryMonth, year)
+			if carryYear { // years 列表回到首页，表示没有新的年份可用了
+				weekdayValid = false
+				break
+			} else if year != value.Year() { // 年份改了，重置 month
+				month = minMonth
+			}
+
+			day = firstWeekDay(weekdays, month, year)
+		}
 	}
 
 	// 同时设置了 days，需要比较两个值哪个更近
 	if len(days) > 0 {
 		y, m, d := nextMonthDay(years, months, days, value, carry)
-		if !(year < y || month < m || day < d) {
-			year = y
-			month = m
-			day = d
+		if y != 0 || m != 0 || d != 0 {
+			if !weekdayValid || y < year || (y == year && m < month) || (y == year && m == month && d < day) {
+				return y, m, d
+			}
 		}
+	}
+
+	if !weekdayValid {
+		return 0, 0, 0
 	}
 
 	return year, month, day
@@ -135,7 +184,7 @@ func nextWeekDay(
 // b 只有在 values 为空时才有用。
 //
 // 返回找到的值以及是否已经进行进位的标记，如果已经进位，那么返回的值应该是 values[0] 或是 b.min。
-func nextValue[T integer](values []T, b bound[T], carry bool, value T) (T, bool) {
+func nextValue[T integer](values []T, b bound[T], carry bool, value T) (v, min T, c bool) {
 	if carry { // 前一个值有进位
 		value += 1
 	}
@@ -144,22 +193,22 @@ func nextValue[T integer](values []T, b bound[T], carry bool, value T) (T, bool)
 		for _, v := range values {
 			// carry 为 true，表示前面已经执行了 value+1，
 			// 那么 v 可以等于 value，否则 v 必须大于 value。
-			if (carry && v >= value) || v > value {
-				return v, false
+			if v >= value {
+				return v, values[0], false
 			}
 		}
 
 		// 如果 values 已经没有符合要求的值了，则拿 values[0] 并返回该值已经进位的标记。
-		return values[0], true
+		return values[0], values[0], true
 	}
 
 	// 未指定 values，则从参数 b 中依次查找可用的值
 
 	if (b.max == -1) || (value <= b.max) { // 不存在 max 或是 value 还未超出 max
-		return value, false
+		return value, b.min, false
 	}
 
-	return b.min, true
+	return b.min, b.min, true
 
 }
 
@@ -179,4 +228,14 @@ func getMonthWeekDay(weekday time.Weekday, month time.Month, year int) int {
 	}
 	last := first.AddDate(0, 0, int(weekday))
 	return last.Day()
+}
+
+func firstWeekDay(weekdays []time.Weekday, month time.Month, year int) int {
+	day := 0
+	for _, w := range weekdays {
+		if d := getMonthWeekDay(w, month, year); day == 0 || d < day {
+			day = d
+		}
+	}
+	return day
 }

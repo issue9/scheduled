@@ -33,6 +33,27 @@ func TestNext(t *testing.T) {
 			want:  "2024-05-01T12:34:57Z",
 		},
 		{
+			name: "仅限制秒",
+
+			value:   "2024-05-01T12:34:56Z",
+			seconds: []int{0, 15, 30, 45},
+
+			want: "2024-05-01T12:35:00Z",
+		},
+		{
+			name: "年月日",
+
+			value:   "2024-01-31T00:00:00Z",
+			years:   []int{2024, 2028},
+			months:  []time.Month{time.February},
+			days:    []int{29},
+			hours:   []int{0},
+			minutes: []int{0},
+			seconds: []int{0},
+
+			want: "2024-02-29T00:00:00Z",
+		},
+		{
 			name: "时分秒级联进位",
 
 			value:   "2024-05-01T12:34:56Z",
@@ -67,6 +88,15 @@ func TestNext(t *testing.T) {
 			days:   []int{15},
 
 			want: "2024-06-15T12:00:01Z",
+		},
+		{
+			name: "秒未进位，分钟保持不变",
+
+			value:   "2024-05-01T12:00:05Z",
+			minutes: []int{0, 30},
+			seconds: []int{10},
+
+			want: "2024-05-01T12:00:10Z",
 		},
 	}
 
@@ -111,7 +141,7 @@ func TestNextMonthDay(t *testing.T) {
 			days:   []int{31},
 
 			year:  2024,
-			month: time.March,
+			month: time.January,
 			day:   31,
 		},
 		{
@@ -124,7 +154,7 @@ func TestNextMonthDay(t *testing.T) {
 
 			year:  2024,
 			month: time.January,
-			day:   20,
+			day:   15,
 		},
 		{
 			name: "闰年 2-29",
@@ -162,6 +192,38 @@ func TestNextMonthDay(t *testing.T) {
 			year:  2025,
 			month: time.January,
 			day:   31,
+		},
+		{
+			name: "月份前进时日期从头计算",
+
+			value:  "2024-05-01T00:00:00Z",
+			months: []time.Month{time.December},
+			days:   []int{1, 15},
+
+			year:  2024,
+			month: time.December,
+			day:   1,
+		},
+		{
+			name: "年份约束",
+
+			value: "2024-05-01T00:00:00Z",
+			years: []int{2025},
+
+			year:  2025,
+			month: time.January,
+			day:   1,
+		},
+		{
+			name: "年份和日期约束",
+
+			value: "2024-05-10T00:00:00Z",
+			years: []int{2025},
+			days:  []int{1, 15},
+
+			year:  2025,
+			month: time.January,
+			day:   1,
 		},
 	}
 
@@ -202,14 +264,14 @@ func TestNextWeekDay(t *testing.T) {
 			day:   3,
 		},
 		{
-			name: "同一星期顺延一周",
+			name: "同一天",
 
 			value:    "2024-05-01T00:00:00Z",
 			weekdays: []time.Weekday{time.Wednesday},
 
 			year:  2024,
 			month: time.May,
-			day:   8,
+			day:   1,
 		},
 		{
 			name: "星期跨月",
@@ -237,6 +299,17 @@ func TestNextWeekDay(t *testing.T) {
 			value:    "2024-05-10T00:00:00Z",
 			months:   []time.Month{time.June, time.August},
 			weekdays: []time.Weekday{time.Monday},
+
+			year:  2024,
+			month: time.June,
+			day:   3,
+		},
+		{
+			name: "跳月后取最早的星期",
+
+			value:    "2024-05-01T00:00:00Z",
+			months:   []time.Month{time.June},
+			weekdays: []time.Weekday{time.Monday, time.Friday},
 
 			year:  2024,
 			month: time.June,
@@ -276,6 +349,53 @@ func TestNextWeekDay(t *testing.T) {
 			month: time.May,
 			day:   2,
 		},
+		{
+			name: "星期受年份约束",
+
+			value:    "2024-05-01T00:00:00Z",
+			years:    []int{2025},
+			weekdays: []time.Weekday{time.Monday},
+
+			year:  2025,
+			month: time.January,
+			day:   6,
+		},
+		{
+			name: "跨月时星期与日期取更早的",
+
+			value:    "2024-05-30T00:00:00Z",
+			weekdays: []time.Weekday{time.Monday},
+			days:     []int{31},
+
+			year:  2024,
+			month: time.May,
+			day:   31,
+		},
+		{
+			name: "days 无匹配时仍使用星期",
+
+			value:    "2024-01-01T00:00:00Z",
+			months:   []time.Month{time.February},
+			weekdays: []time.Weekday{time.Monday},
+			days:     []int{31},
+
+			year:  2024,
+			month: time.February,
+			day:   5,
+		},
+		{
+			name: "星期年份耗尽时仍使用日期",
+
+			value:    "2024-12-30T00:00:00Z",
+			years:    []int{2024},
+			weekdays: []time.Weekday{time.Monday},
+			days:     []int{31},
+			carry:    true,
+
+			year:  2024,
+			month: time.December,
+			day:   31,
+		},
 	}
 
 	for _, item := range data {
@@ -296,32 +416,32 @@ func TestNextValue(t *testing.T) {
 	t.Run("values+!carry", func(t *testing.T) {
 		a := assert.New(t, false)
 
-		val, carry := nextValue([]int{1, 2, 3}, bound[int]{}, false, 1)
-		a.False(carry).Equal(val, 2)
+		val, _, carry := nextValue([]int{1, 2, 3}, bound[int]{}, false, 1)
+		a.False(carry).Equal(val, 1)
 
 		// 当前值小于列表的最小值，返回最小值
-		val, carry = nextValue([]int{1, 2, 3}, bound[int]{}, false, 0)
+		val, _, carry = nextValue([]int{1, 2, 3}, bound[int]{}, false, 0)
 		a.False(carry).Equal(val, 1)
 
 		// 当前值是列表的最大值，且不需要进位，不能回绕
-		val, carry = nextValue([]int{1, 2, 3}, bound[int]{}, false, 3)
-		a.True(carry).Equal(val, 1)
+		val, _, carry = nextValue([]int{1, 2, 3}, bound[int]{}, false, 3)
+		a.False(carry).Equal(val, 3)
 
 		// 当前值大于列表的最大值，才回绕并进位
-		val, carry = nextValue([]int{1, 2, 3}, bound[int]{}, false, 4)
+		val, _, carry = nextValue([]int{1, 2, 3}, bound[int]{}, false, 4)
 		a.True(carry).Equal(val, 1)
 	})
 
 	t.Run("values+carry", func(t *testing.T) {
 		a := assert.New(t, false)
 
-		val, carry := nextValue([]int{1, 2, 3}, bound[int]{}, true, 2)
+		val, _, carry := nextValue([]int{1, 2, 3}, bound[int]{}, true, 2)
 		a.False(carry).Equal(val, 3)
 
-		val, carry = nextValue([]int{1, 2, 3}, bound[int]{}, true, 1)
+		val, _, carry = nextValue([]int{1, 2, 3}, bound[int]{}, true, 1)
 		a.False(carry).Equal(val, 2)
 
-		val, carry = nextValue([]int{1, 2, 3}, bound[int]{}, true, 3)
+		val, _, carry = nextValue([]int{1, 2, 3}, bound[int]{}, true, 3)
 		a.True(carry).Equal(val, 1)
 	})
 
@@ -329,34 +449,34 @@ func TestNextValue(t *testing.T) {
 		a := assert.New(t, false)
 
 		// 未进位：允许返回当前值
-		wday, carry := nextValue(nil, weekdayBound, false, time.Wednesday)
+		wday, _, carry := nextValue(nil, weekdayBound, false, time.Wednesday)
 		a.False(carry).Equal(wday, time.Wednesday)
 
-		val, carry := nextValue(nil, minuteBound, false, 30)
+		val, _, carry := nextValue(nil, minuteBound, false, 30)
 		a.False(carry).Equal(val, 30)
 
 		// 当前值已经是上限，且不需要进位，不能回绕
-		val, carry = nextValue(nil, minuteBound, false, 59)
+		val, _, carry = nextValue(nil, minuteBound, false, 59)
 		a.False(carry).Equal(val, 59)
 
 		// 超出上限才回绕并进位
-		val, carry = nextValue(nil, minuteBound, false, 60)
+		val, _, carry = nextValue(nil, minuteBound, false, 60)
 		a.True(carry).Equal(val, 0)
 	})
 
 	t.Run("bound+carry", func(t *testing.T) {
 		a := assert.New(t, false)
 
-		wday, carry := nextValue(nil, weekdayBound, true, time.Wednesday)
+		wday, _, carry := nextValue(nil, weekdayBound, true, time.Wednesday)
 		a.False(carry).Equal(wday, time.Thursday)
 
-		val, carry := nextValue(nil, minuteBound, true, 30)
+		val, _, carry := nextValue(nil, minuteBound, true, 30)
 		a.False(carry).Equal(val, 31)
 
-		wday, carry = nextValue(nil, weekdayBound, true, time.Saturday)
+		wday, _, carry = nextValue(nil, weekdayBound, true, time.Saturday)
 		a.True(carry).Equal(wday, time.Sunday)
 
-		val, carry = nextValue(nil, minuteBound, true, 59)
+		val, _, carry = nextValue(nil, minuteBound, true, 59)
 		a.True(carry).Equal(val, 0)
 	})
 
@@ -364,13 +484,13 @@ func TestNextValue(t *testing.T) {
 		a := assert.New(t, false)
 
 		// max 为 -1 表示没有上限
-		val, carry := nextValue(nil, bound[int]{min: 1, max: -1}, false, 100)
+		val, _, carry := nextValue(nil, bound[int]{min: 1, max: -1}, false, 100)
 		a.False(carry).Equal(val, 100)
 
-		val, carry = nextValue(nil, bound[int]{min: 1, max: -1}, true, 100)
+		val, _, carry = nextValue(nil, bound[int]{min: 1, max: -1}, true, 100)
 		a.False(carry).Equal(val, 101)
 
-		val, carry = nextValue(nil, yearBound, true, maxYear)
+		val, _, carry = nextValue(nil, yearBound, true, maxYear)
 		a.True(carry).Equal(val, minYear)
 	})
 }
