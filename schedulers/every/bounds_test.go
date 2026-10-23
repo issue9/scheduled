@@ -7,7 +7,7 @@ package every
 import (
 	"testing"
 
-	"github.com/issue9/assert/v5"
+	"github.com/issue9/assert/v6"
 )
 
 func TestBound_valid(t *testing.T) {
