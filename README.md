@@ -31,12 +31,12 @@ expr := func() error {
     return err
 }
 
-srv.Tick(ticker, 1*time.Minute, false, false)
-srv.Cron(expr, "@daily", false)
-srv.Cron(expr, "* * 1 * * *", false)
+srv.Tick("title"，ticker, 1*time.Minute, false, false)
+srv.Cron("title"，expr, "@daily", false)
+srv.Cron("title"，expr, "* * 1 * * *", false)
 
 ctx, cancel := context.WithCancel(context.Background())
-srv.Serve(ctx)
+err := srv.Serve(ctx)
 ```
 
 版权

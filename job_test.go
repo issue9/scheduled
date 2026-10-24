@@ -12,6 +12,8 @@ import (
 
 	"github.com/issue9/assert/v6"
 	"github.com/issue9/localeutil"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 
 	"github.com/issue9/scheduled/schedulers"
 	"github.com/issue9/scheduled/schedulers/ticker"
@@ -46,6 +48,9 @@ var (
 func TestJob_run(t *testing.T) {
 	a := assert.New(t, false)
 
+	term := NewTermLogger(message.NewPrinter(language.SimplifiedChinese))
+	srv := NewServer(nil, term, term)
+
 	newTickerJob := func(duration time.Duration, imm bool) schedulers.Scheduler {
 		s := ticker.Tick(duration, imm)
 		a.NotNil(s)
@@ -54,9 +59,10 @@ func TestJob_run(t *testing.T) {
 
 	now := time.Now()
 	j := &Job{
-		title: localeutil.StringPhrase("succ"),
-		f:     succFunc,
-		s:     newTickerJob(time.Second, false),
+		srv:       srv,
+		title:     localeutil.StringPhrase("succ"),
+		f:         succFunc,
+		scheduler: newTickerJob(time.Second, false),
 	}
 	j.init(now)
 	j.run(now, &defaultLogger{}, &defaultLogger{})
@@ -66,9 +72,10 @@ func TestJob_run(t *testing.T) {
 
 	now = time.Now()
 	j = &Job{
-		title: localeutil.StringPhrase("erro"),
-		f:     erroFunc,
-		s:     newTickerJob(time.Second, false),
+		srv:       srv,
+		title:     localeutil.StringPhrase("erro"),
+		f:         erroFunc,
+		scheduler: newTickerJob(time.Second, false),
 	}
 	j.init(now)
 	j.run(now, errlog, &defaultLogger{})
@@ -78,9 +85,10 @@ func TestJob_run(t *testing.T) {
 
 	now = time.Now()
 	j = &Job{
-		title: localeutil.StringPhrase("fail"),
-		f:     failFunc,
-		s:     newTickerJob(time.Second, false),
+		srv:       srv,
+		title:     localeutil.StringPhrase("fail"),
+		f:         failFunc,
+		scheduler: newTickerJob(time.Second, false),
 	}
 	j.init(now)
 	j.run(now, errlog, errlog)
@@ -91,10 +99,11 @@ func TestJob_run(t *testing.T) {
 	// delay == true
 	now = time.Now()
 	j = &Job{
-		title: localeutil.StringPhrase("delay=true"),
-		f:     delayFunc,
-		s:     newTickerJob(time.Second, false),
-		delay: true,
+		srv:       srv,
+		title:     localeutil.StringPhrase("delay=true"),
+		f:         delayFunc,
+		scheduler: newTickerJob(time.Second, false),
+		delay:     true,
 	}
 	j.init(now)
 	j.run(now, &defaultLogger{}, &defaultLogger{})
@@ -106,10 +115,11 @@ func TestJob_run(t *testing.T) {
 	// delay == false
 	now = time.Now()
 	j = &Job{
-		title: localeutil.StringPhrase("delay=false"),
-		f:     delayFunc,
-		s:     newTickerJob(time.Second, false),
-		delay: false,
+		srv:       srv,
+		title:     localeutil.StringPhrase("delay=false"),
+		f:         delayFunc,
+		scheduler: newTickerJob(time.Second, false),
+		delay:     false,
 	}
 	j.init(now)
 	j.run(now, &defaultLogger{}, &defaultLogger{})

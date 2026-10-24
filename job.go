@@ -23,10 +23,11 @@ type JobFunc = func(time.Time) error
 
 // Job 定时任务
 type Job struct {
-	s     Scheduler
-	title localeutil.Stringer
-	f     JobFunc
-	delay bool
+	srv       *Server
+	scheduler Scheduler
+	title     localeutil.Stringer
+	f         JobFunc
+	delay     bool
 
 	// 以下内容需要上锁
 
@@ -85,7 +86,7 @@ func (j *Job) calcState(now time.Time) {
 
 	j.state = Running
 	j.prev = j.next
-	j.next = j.s.Next(now) // 先计算 next，保证调用者重复调用 run 时能获取正确的 next。
+	j.next = j.scheduler.Next(now) // 先计算 next，保证调用者重复调用 run 时能获取正确的 next。
 }
 
 // 运行当前的任务
@@ -114,31 +115,32 @@ func (j *Job) run(at time.Time, errlog, infolog Logger) {
 		j.state = Stopped
 	}
 
-	j.next = j.s.Next(time.Now()) // j.f 可能会花费大量时间，所以重新计算 next
+	j.next = j.scheduler.Next(time.Now().In(j.srv.Location())) // j.f 可能会花费大量时间，所以重新计算 next
 }
 
 // 初始化当前任务，获取其下次执行时间。
 func (j *Job) init(now time.Time) {
 	j.locker.Lock()
 	defer j.locker.Unlock()
-	j.next = j.s.Next(now)
+	j.next = j.scheduler.Next(now)
 }
 
 func sortJobs(jobs []*Job) {
 	slices.SortFunc(jobs, func(i, j *Job) int {
-		if j.next.IsZero() {
+		zi, zj := i.next.IsZero(), j.next.IsZero()
+		switch {
+		case zi && zj:
+			return 0
+		case zi:
+			return 1 // zero 放最后
+		case zj:
 			return -1
-		}
-		if i.next.IsZero() {
-			return 1
 		}
 		return i.next.Compare(j.next)
 	})
 }
 
 // Jobs 返回所有注册的任务
-//
-// 返回的是当前状态下的副本，具有时效性。
 func (s *Server) Jobs() iter.Seq[*Job] {
 	return func(yield func(*Job) bool) {
 		for _, job := range s.jobs {
@@ -177,15 +179,16 @@ func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time, delay boo
 // 返回一个取消当前任务的方法，同时会从列表中删除。
 func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, delay bool) context.CancelFunc {
 	job := &Job{
-		s:     scheduler,
-		title: title,
-		f:     f,
-		delay: delay,
+		srv:       s,
+		scheduler: scheduler,
+		title:     title,
+		f:         f,
+		delay:     delay,
 	}
 	s.jobs = append(s.jobs, job)
 
 	if s.running { // 服务已经运行，则需要触发调度任务。
-		job.init(time.Now())
+		job.init(time.Now().In(s.Location()))
 		s.schedule <- struct{}{} // 执行一次调度任务
 	}
 

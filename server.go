@@ -78,7 +78,7 @@ LOOP:
 				continue LOOP
 			}
 
-			now = time.Now()
+			now = time.Now().In(s.Location())
 
 			sortJobs(s.jobs)
 			dur := s.jobs[0].Next().Sub(now)
