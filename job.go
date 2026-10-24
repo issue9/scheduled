@@ -90,8 +90,8 @@ func (j *Job) calcState(now time.Time) {
 }
 
 // 运行当前的任务
-func (j *Job) run(at time.Time, errlog, infolog Logger) {
-	go infolog.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.Title(), at.String()))
+func (j *Job) run(at time.Time) {
+	go j.srv.info.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.Title(), at.String()))
 
 	j.locker.Lock()
 	defer j.locker.Unlock()
@@ -104,13 +104,13 @@ func (j *Job) run(at time.Time, errlog, infolog Logger) {
 				j.err = localeutil.Error("recover msg %v", msg)
 			}
 			j.state = Failed
-			errlog.Error(j.err) // 不像 infolog 一样采用异步，可能会在执行过程中 j.err 被改值。
+			j.srv.erro.Error(j.err) // 不像 info 一样采用异步，可能会在执行过程中 j.err 被改值。
 		}
 	}()
 
 	if j.err = j.f(at); j.err != nil {
 		j.state = Failed
-		errlog.Error(j.err)
+		j.srv.erro.Error(j.err)
 	} else {
 		j.state = Stopped
 	}

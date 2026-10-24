@@ -54,6 +54,10 @@ func (s *Server) Location() *time.Location { return s.loc }
 
 // Serve 运行服务
 func (s *Server) Serve(ctx context.Context) error {
+	if s.running {
+		return ErrServerRunning()
+	}
+
 	s.running = true
 	defer func() {
 		s.running = false
@@ -69,9 +73,11 @@ LOOP:
 	for {
 		select {
 		case <-ctx.Done():
+			close(s.works)      // 所有准备运行的任务都取消
+			s.jobs = s.jobs[:0] // 清空所有的任务
 			return ctx.Err()
 		case j := <-s.works:
-			go j.run(now, s.erro, s.info)
+			go j.run(now)
 		default: // 没有在执行的任务了，则计算一次时间
 			if len(s.jobs) == 0 {
 				<-time.After(time.Second) // 没有任务，1 秒后再次执行调试

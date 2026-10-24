@@ -41,8 +41,6 @@ var (
 		time.Sleep(2 * time.Second)
 		return nil
 	}
-
-	errlog = &defaultLogger{}
 )
 
 func TestJob_run(t *testing.T) {
@@ -65,7 +63,7 @@ func TestJob_run(t *testing.T) {
 		scheduler: newTickerJob(time.Second, false),
 	}
 	j.init(now)
-	j.run(now, &defaultLogger{}, &defaultLogger{})
+	j.run(now)
 	a.Nil(j.Err()).
 		Equal(j.State(), Stopped).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
@@ -78,7 +76,7 @@ func TestJob_run(t *testing.T) {
 		scheduler: newTickerJob(time.Second, false),
 	}
 	j.init(now)
-	j.run(now, errlog, &defaultLogger{})
+	j.run(now)
 	a.NotNil(j.Err()).
 		Equal(j.State(), Failed).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
@@ -91,7 +89,7 @@ func TestJob_run(t *testing.T) {
 		scheduler: newTickerJob(time.Second, false),
 	}
 	j.init(now)
-	j.run(now, errlog, errlog)
+	j.run(now)
 	a.NotNil(j.Err()).
 		Equal(j.State(), Failed).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
@@ -106,7 +104,7 @@ func TestJob_run(t *testing.T) {
 		delay:     true,
 	}
 	j.init(now)
-	j.run(now, &defaultLogger{}, &defaultLogger{})
+	j.run(now)
 	a.Nil(j.Err()).
 		Equal(j.State(), Stopped).
 		True(j.Delay()).
@@ -122,7 +120,7 @@ func TestJob_run(t *testing.T) {
 		delay:     false,
 	}
 	j.init(now)
-	j.run(now, &defaultLogger{}, &defaultLogger{})
+	j.run(now)
 	a.Nil(j.Err()).
 		Equal(j.State(), Stopped).
 		Empty(j.Prev()).

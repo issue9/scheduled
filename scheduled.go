@@ -31,6 +31,13 @@ const (
 	Failed
 )
 
+var errServerRunning = localeutil.Error("server is running, cannot start again")
+
+// ErrServerRunning 表示 [Server] 已经处于运行状态
+//
+// 当多次调用 [Server.Serve] 时，可能返回此错误信息。
+func ErrServerRunning() error { return errServerRunning }
+
 type (
 	Scheduler     = schedulers.Scheduler
 	SchedulerFunc = schedulers.SchedulerFunc

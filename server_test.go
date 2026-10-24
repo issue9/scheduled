@@ -49,6 +49,8 @@ func TestServer_Serve(t *testing.T) {
 		a.ErrorIs(srv.Serve(ctx), context.Canceled)
 	}()
 	time.Sleep(5 * time.Second)
+	a.Equal(srv.Serve(context.Background()), ErrServerRunning()) // 多次调用，返回的错误。
+	a.Equal(srv.Serve(context.Background()), ErrServerRunning()) // 多次调用，返回的错误。
 	cancel()
 
 	a.NotEmpty(tickers1)
@@ -204,7 +206,7 @@ func TestServer_Serve_loc(t *testing.T) {
 
 	// 将 srv 的时区调到 15 小时前，保证 job 还没到时间
 	loc := time.FixedZone("UTC-15", -15*60*60)
-	srv := NewServer(loc, errlog, nil)
+	srv := NewServer(loc, &defaultLogger{}, nil)
 	a.NotNil(srv)
 
 	buf := new(bytes.Buffer)
