@@ -44,7 +44,7 @@ func ErrServerRunning() error { return errServerRunning }
 
 // ErrServerCancelled 表示 [Server] 已经被取消
 //
-// 当 [Server.Serve] 的 ctx 已经 Done 时，可能返回此错误信息。
+// 当 [Server.Serve] 的 ctx 已经 Done 时，再次调用 [Server.Serve] 可能返回此错误信息。
 func ErrServerCancelled() error { return errServerCancelled }
 
 type (
@@ -87,7 +87,7 @@ var (
 	}
 )
 
-// NewTermLogger 声明输出到终的日志
+// NewTermLogger 声明输出到终端的日志
 func NewTermLogger(p *localeutil.Printer) Logger { return &termLogger{p: p} }
 
 func (l *defaultLogger) Error(error) {}

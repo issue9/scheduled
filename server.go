@@ -6,12 +6,15 @@ package scheduled
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
 // Server 管理所有的定时任务
 type Server struct {
-	jobs      []*Job
+	jobs []*Job
+	wait sync.WaitGroup
+
 	schedule  chan struct{} // 重新执行调度任务
 	cancelled bool          // 已经接受到 context.Context.Done() 的信号，表示服务已经被取消
 
@@ -52,6 +55,8 @@ func NewServer(loc *time.Location, erro, info Logger) *Server {
 func (s *Server) Location() *time.Location { return s.loc }
 
 // Serve 运行服务
+//
+// 并不是 ctx.Done 就立即返回，还需要等待所有的 Job 完成当次任务。
 func (s *Server) Serve(ctx context.Context) error {
 	if s.cancelled {
 		return ErrServerCancelled()
@@ -73,6 +78,8 @@ func (s *Server) Serve(ctx context.Context) error {
 			j.locker.Unlock()
 		}
 		s.jobs = nil // 直接释放，反正 Server 不具备重启条件
+
+		s.wait.Wait() // 等待所有任务结束
 	}()
 
 	// 初始化任务

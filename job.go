@@ -91,6 +91,9 @@ func (j *Job) calcState(now time.Time) {
 
 // 运行当前的任务
 func (j *Job) run(at time.Time) {
+	j.srv.wait.Add(1)
+	defer j.srv.wait.Done()
+
 	// 可能会存在通过 Server.New 返回的函数主动取消单个 Job 的方式，所以还要考虑 j.State 的值。
 	if j.State() == Cancelled {
 		return
