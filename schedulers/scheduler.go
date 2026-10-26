@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2018-2024 caixw
+// SPDX-FileCopyrightText: 2018-2026 caixw
 //
 // SPDX-License-Identifier: MIT
 
@@ -15,6 +15,8 @@ type Scheduler interface {
 	// 如果返回是零值，表示该调度已经终结，不会再执行该任务，后续也都应返回零值。
 	//
 	// 传递相同的 last 参数，其返回值应该也相同，或是返回一个零值。
+	//
+	// 此方法不允许 panic，否则可能导致整个宿主服务退出。
 	Next(last time.Time) time.Time
 }
 

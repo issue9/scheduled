@@ -27,15 +27,14 @@ type Job struct {
 	scheduler Scheduler
 	title     localeutil.Stringer
 	f         JobFunc
-	delay     bool
 
 	// 以下内容需要上锁
 
 	locker sync.RWMutex
 	state  State
-	err    error     // 出错时的错误内容
-	prev   time.Time // 上次实际上执行的时间
-	next   time.Time // 下一次可能执行的时间
+	err    error // 出错时的错误内容
+	prev   time.Time
+	next   time.Time
 }
 
 // Title 简要描述信息
@@ -75,21 +74,18 @@ func (j *Job) Err() (err error) {
 	return err
 }
 
-// Delay 是否在延迟执行
-//
-// 即从任务执行完成的时间点计算下一次执行时间。
-func (j *Job) Delay() bool { return j.delay }
-
 func (j *Job) calcState(now time.Time) {
 	j.locker.Lock()
-	defer j.locker.Unlock()
-
 	j.state = Running
 	j.prev = j.next
-	j.next = j.scheduler.Next(now) // 先计算 next，保证调用者重复调用 run 时能获取正确的 next。
+	// 由文档约定不能 panic，先计算 next，保证调用者重复调用 run 时能获取正确的 next。
+	j.next = j.scheduler.Next(now)
+	j.locker.Unlock()
 }
 
 // 运行当前的任务
+//
+// at 调用此函数的大致时间
 func (j *Job) run(at time.Time) {
 	// 可能会存在通过 Server.New 返回的函数主动取消单个 Job 的方式，所以还要考虑 j.State 的值。
 	if j.State() == Cancelled {
@@ -99,24 +95,24 @@ func (j *Job) run(at time.Time) {
 	go j.srv.info.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.Title(), at.String()))
 
 	defer func() {
+		var err error
 		if msg := recover(); msg != nil {
-			err, ok := msg.(error)
-			if !ok {
+			var ok bool
+			if err, ok = msg.(error); !ok {
 				err = localeutil.Error("recover msg %v", msg)
 			}
-
-			next := j.scheduler.Next(at)
-
-			j.locker.Lock()
-			if j.state != Cancelled {
-				j.state = Failed
-			}
-			j.err = err
-			j.next = next
-			j.locker.Unlock()
-
-			j.srv.erro.Error(err) // 不像 info 一样采用异步，可能会在执行过程中 j.err 被改值。
+			go j.srv.erro.Error(err)
 		}
+
+		j.locker.Lock()
+		if j.state != Cancelled {
+			if err != nil {
+				j.state = Failed
+				j.err = err
+			}
+			j.next = j.scheduler.Next(time.Now().In(j.srv.Location())) // 由文档约定不能 panic
+		}
+		j.locker.Unlock()
 	}()
 
 	if err := j.f(at); err != nil {
@@ -130,12 +126,8 @@ func (j *Job) run(at time.Time) {
 			return
 		}
 
-		// j.f 可能会花费大量时间，所以重新计算 next
-		// 放在 locker 执行计算，防止 Next panic 导致阻塞。
-		next := j.scheduler.Next(at)
 		j.locker.Lock()
 		j.state = Failed
-		j.next = next
 		j.err = err
 		j.locker.Unlock()
 		return
@@ -146,12 +138,8 @@ func (j *Job) run(at time.Time) {
 		return
 	}
 
-	// j.f 可能会花费大量时间，所以重新计算 next
-	// 放在 locker 执行计算，防止 Next panic 导致阻塞。
-	next := j.scheduler.Next(at)
 	j.locker.Lock()
 	j.state = Stopped
-	j.next = next
 	j.locker.Unlock()
 }
 
@@ -198,32 +186,31 @@ func (s *Server) Jobs() iter.Seq[*Job] {
 // Tick 添加一个新的定时任务
 //
 // imm 表示是否先执行一次任务，如果为 true，将会排在任务队列的前列，而不是立即执行！
-func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, imm, delay bool) context.CancelFunc {
-	return s.New(title, f, ticker.Tick(dur, imm), delay)
+func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, imm bool) context.CancelFunc {
+	return s.New(title, f, ticker.Tick(dur, imm))
 }
 
 // Cron 使用 cron 表达式新建一个定时任务
 //
 // 具体文件可以参考 [every.ParseCron]
-func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string, delay bool) context.CancelFunc {
-	return s.New(title, f, every.FromCron(spec), delay)
+func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string) context.CancelFunc {
+	return s.New(title, f, every.FromCron(spec))
 }
 
 // At 添加 At 类型的定时器
 //
 // 具体文件可以参考 [at.At]
-func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time, delay bool) context.CancelFunc {
-	return s.New(title, f, at.At(t), delay)
+func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time) context.CancelFunc {
+	return s.New(title, f, at.At(t))
 }
 
 // New 添加一个新的定时任务
 //
 // title 任务的简要描述；
-// delay 是否从任务执行完之后，才开始计算下个执行的时间点；
 // f 定时任务实际执行的函数；
 // scheduler 定时任务的调度器；
 // 返回一个取消当前任务的方法，同时会从列表中删除。
-func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, delay bool) context.CancelFunc {
+func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler) context.CancelFunc {
 	if scheduler == nil {
 		panic("参数 scheduler 不能为空")
 	}
@@ -239,7 +226,6 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, 
 		scheduler: scheduler,
 		title:     title,
 		f:         f,
-		delay:     delay,
 	}
 	s.jobsMu.Lock()
 	s.jobs = append(s.jobs, job)

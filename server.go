@@ -57,6 +57,7 @@ func (s *Server) Location() *time.Location { return s.loc }
 
 // Serve 运行服务
 //
+// ctx 用于控制服务的退出，不能为空。
 // 并不是 ctx.Done 就立即返回，还需要等待所有的 Job 完成当次任务。
 func (s *Server) Serve(ctx context.Context) error {
 	if s.cancelled {
@@ -103,7 +104,13 @@ LOOP:
 			s.jobsMu.Lock()
 			if len(s.jobs) == 0 {
 				s.jobsMu.Unlock()
-				<-time.After(time.Second) // 没有任务，1 秒后再次执行调试
+
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-s.schedule:
+				case <-time.After(time.Second): // 没有任务，1 秒后再次执行调度
+				}
 				continue LOOP
 			} else {
 				sortJobs(s.jobs)
@@ -114,7 +121,12 @@ LOOP:
 			// 队列中有任务，但是第一个任务的调度时间 0，表示所有的任务都不需要执行。
 			// 那么就创建一个 1 秒的定时器，看看一秒之后有没有新的任务加入且需要执行的。
 			if job1.Next().IsZero() {
-				<-time.After(time.Second)
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-s.schedule:
+				case <-time.After(time.Second): // 没有任务，1 秒后再次执行调度
+				}
 				continue LOOP
 			}
 
@@ -127,10 +139,9 @@ LOOP:
 				case <-ctx.Done():
 					return ctx.Err()
 				case <-time.After(dur):
-					continue LOOP
 				case <-s.schedule:
-					continue LOOP
 				}
+				continue LOOP
 			}
 
 			// 队列中有任务，且已经到执行时间了，依次调度任务。
@@ -142,7 +153,7 @@ LOOP:
 				}
 
 				if !j.Next().IsZero() && ((j.Next().Before(now) || j.Next().Equal(now)) &&
-					(!j.Delay() || (j.State() != Running && j.State() != Cancelled))) {
+					(j.State() != Running && j.State() != Cancelled)) {
 					j.calcState(now) // 先计算状态，再异步运行。
 					s.wait.Go(func() { j.run(now) })
 				}

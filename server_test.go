@@ -33,17 +33,17 @@ func TestServer_Serve(t *testing.T) {
 	srv.Tick(localeutil.StringPhrase("ticker1-delay"), func(t time.Time) error {
 		tickers1 = append(tickers1, t)
 		return nil
-	}, time.Second, false, true)
+	}, time.Second, false)
 
 	srv.Tick(localeutil.StringPhrase("ticker2-delay"), func(t time.Time) error {
 		tickers2 = append(tickers2, t)
 		return nil
-	}, 2*time.Second, false, true)
+	}, 2*time.Second, false)
 
 	srv.Tick(localeutil.StringPhrase("ticker3-imm-delay"), func(t time.Time) error {
 		tickers3 = append(tickers3, t)
 		return nil
-	}, 2*time.Second, true, true)
+	}, 2*time.Second, true)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -57,7 +57,7 @@ func TestServer_Serve(t *testing.T) {
 	a.Equal(srv.Serve(context.Background()), ErrServerCancelled()) // 多次调用，返回的错误。
 	a.Equal(srv.Serve(context.Background()), ErrServerCancelled()) // 多次调用，返回的错误。
 	a.PanicValue(func() {
-		srv.New(localeutil.Phrase("test"), succFunc, at.At(time.Now()), true)
+		srv.New(localeutil.Phrase("test"), succFunc, at.At(time.Now()))
 	}, ErrServerCancelled())
 
 	a.NotEmpty(tickers1)
@@ -102,7 +102,7 @@ func TestServer_Serve_empty(t *testing.T) {
 		tickers1 = append(tickers1, t)
 		println("empty-ticker1", t.String())
 		return nil
-	}, time.Second, true, false)
+	}, time.Second, true)
 
 	time.Sleep(5 * time.Second)
 	cancel()
@@ -131,7 +131,7 @@ func TestServer_Serve_zero(t *testing.T) {
 		tickers1 = append(tickers1, t)
 		println("zero-ticker1", t.String())
 		return nil
-	}, zero{}, false)
+	}, zero{})
 	a.Equal(len(slices.Collect(srv.Jobs())), 1)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -146,7 +146,7 @@ func TestServer_Serve_zero(t *testing.T) {
 		tickers2 = append(tickers2, t)
 		println("zero-ticker2", t.String())
 		return nil
-	}, time.Second, true, false)
+	}, time.Second, true)
 
 	time.Sleep(5 * time.Second)
 	cancel()
@@ -172,7 +172,7 @@ func TestServer_Serve_delay(t *testing.T) {
 		println("delay-ticker1", t.String())
 		time.Sleep(2 * time.Second)
 		return nil
-	}, time.Second, true, true)
+	}, time.Second, true)
 
 	tickers2 := make([]time.Time, 0, 20)
 	srv.Tick(localeutil.StringPhrase("delay-ticker2"), func(t time.Time) error {
@@ -180,7 +180,7 @@ func TestServer_Serve_delay(t *testing.T) {
 		println("delay-ticker2", t.String())
 		time.Sleep(2 * time.Second)
 		return nil
-	}, time.Second, false, true)
+	}, time.Second, false)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -228,7 +228,7 @@ func TestServer_Serve_loc(t *testing.T) {
 	h, minute, s := now.Clock()
 	spec := fmt.Sprintf("%d %d %d %d %d *", s, minute, h, d, m)
 
-	srv.Cron(localeutil.StringPhrase("cron"), job, spec, false)
+	srv.Cron(localeutil.StringPhrase("cron"), job, spec)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		srv.Serve(ctx)

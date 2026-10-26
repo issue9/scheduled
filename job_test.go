@@ -101,31 +101,12 @@ func TestJob_run(t *testing.T) {
 		title:     localeutil.StringPhrase("delay=true"),
 		f:         delayFunc,
 		scheduler: newTickerJob(time.Second, false),
-		delay:     true,
 	}
 	j.init(now)
 	j.run(now)
 	a.Nil(j.Err()).
 		Equal(j.State(), Stopped).
-		True(j.Delay()).
 		Equal(j.Next().Unix(), now.Add(3*time.Second).Unix()) // delayFunc 延时两秒
-
-	// delay == false
-	now = time.Now()
-	j = &Job{
-		srv:       srv,
-		title:     localeutil.StringPhrase("delay=false"),
-		f:         delayFunc,
-		scheduler: newTickerJob(time.Second, false),
-		delay:     false,
-	}
-	j.init(now)
-	j.run(now)
-	a.Nil(j.Err()).
-		Equal(j.State(), Stopped).
-		Empty(j.Prev()).
-		False(j.Delay()).
-		Equal(j.Next().Unix(), now.Add(3*time.Second).Unix())
 }
 
 func TestSortJobs(t *testing.T) {
@@ -167,9 +148,9 @@ func TestServer_Jobs(t *testing.T) {
 	a.NotNil(srv)
 
 	now := time.Now()
-	srv.At(localeutil.StringPhrase("j1"), succFunc, now, false)
-	srv.At(localeutil.StringPhrase("j3"), succFunc, now, false)
-	d := srv.At(localeutil.StringPhrase("j2"), succFunc, now, false)
+	srv.At(localeutil.StringPhrase("j1"), succFunc, now)
+	srv.At(localeutil.StringPhrase("j3"), succFunc, now)
+	d := srv.At(localeutil.StringPhrase("j2"), succFunc, now)
 
 	jobs := slices.Collect(srv.Jobs())
 	l := len(jobs)
@@ -185,8 +166,8 @@ func TestServer_Cron(t *testing.T) {
 	a := assert.New(t, false)
 
 	srv := NewServer(nil, nil, nil)
-	srv.Cron(localeutil.StringPhrase("test"), succFunc, "* * * 3-7 * *", false)
+	srv.Cron(localeutil.StringPhrase("test"), succFunc, "* * * 3-7 * *")
 	a.Panic(func() {
-		srv.Cron(localeutil.StringPhrase("test"), succFunc, "* * * 3-7a * *", false)
+		srv.Cron(localeutil.StringPhrase("test"), succFunc, "* * * 3-7a * *")
 	})
 }
