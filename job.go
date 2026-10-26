@@ -176,6 +176,9 @@ func sortJobs(jobs []*Job) {
 // Jobs 返回所有注册的任务
 func (s *Server) Jobs() iter.Seq[*Job] {
 	return func(yield func(*Job) bool) {
+		s.jobsMu.RLock()
+		defer s.jobsMu.RUnlock()
+
 		for _, job := range s.jobs {
 			if !yield(job) {
 				break
@@ -230,11 +233,15 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, 
 		f:         f,
 		delay:     delay,
 	}
+	s.jobsMu.Lock()
 	s.jobs = append(s.jobs, job)
+	s.jobsMu.Unlock()
 
 	if s.running { // 服务已经运行，则需要触发调度任务。
 		job.init(time.Now().In(s.Location()))
-		s.schedule <- struct{}{} // 执行一次调度任务
+		if len(s.schedule) == 0 { // 只有在 s.schedule 为空时，才需要通知 Server 要执行调度任务了
+			s.schedule <- struct{}{}
+		}
 	}
 
 	return func() {
@@ -243,6 +250,8 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, 
 		job.next = time.Time{}
 		job.locker.Unlock()
 
+		s.jobsMu.Lock()
 		s.jobs = slices.DeleteFunc(s.jobs, func(e *Job) bool { return e == job })
+		s.jobsMu.Unlock()
 	}
 }

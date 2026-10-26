@@ -12,8 +12,9 @@ import (
 
 // Server 管理所有的定时任务
 type Server struct {
-	jobs []*Job
-	wait sync.WaitGroup
+	jobsMu sync.RWMutex
+	jobs   []*Job
+	wait   sync.WaitGroup
 
 	schedule  chan struct{} // 重新执行调度任务
 	cancelled bool          // 已经接受到 context.Context.Done() 的信号，表示服务已经被取消
@@ -71,6 +72,7 @@ func (s *Server) Serve(ctx context.Context) error {
 		s.cancelled = true
 
 		// 设置 jobs 的状态，并清空任务列表
+		s.jobsMu.Lock()
 		for _, j := range s.jobs {
 			j.locker.Lock()
 			j.state = Cancelled
@@ -78,15 +80,18 @@ func (s *Server) Serve(ctx context.Context) error {
 			j.locker.Unlock()
 		}
 		s.jobs = nil // 直接释放，反正 Server 不具备重启条件
+		s.jobsMu.Unlock()
 
 		s.wait.Wait() // 等待所有任务结束
 	}()
 
 	// 初始化任务
 	now := time.Now().In(s.Location())
+	s.jobsMu.RLock()
 	for _, job := range s.jobs {
 		job.init(now)
 	}
+	s.jobsMu.RUnlock()
 
 LOOP:
 	for {
@@ -94,15 +99,29 @@ LOOP:
 		case <-ctx.Done():
 			return ctx.Err()
 		default: // 没有在执行的任务了，则计算一次时间
+			var job1 *Job
+			s.jobsMu.Lock()
 			if len(s.jobs) == 0 {
+				s.jobsMu.Unlock()
 				<-time.After(time.Second) // 没有任务，1 秒后再次执行调试
+				continue LOOP
+			} else {
+				sortJobs(s.jobs)
+				job1 = s.jobs[0]
+				s.jobsMu.Unlock()
+			}
+
+			// 队列中有任务，但是第一个任务的调度时间 0，表示所有的任务都不需要执行。
+			// 那么就创建一个 1 秒的定时器，看看一秒之后有没有新的任务加入且需要执行的。
+			if job1.next.IsZero() {
+				<-time.After(time.Second)
 				continue LOOP
 			}
 
-			now = time.Now().In(s.Location())
+			// 队列中有任务，但是还没有到时间，创建定时器。
 
-			sortJobs(s.jobs)
-			dur := s.jobs[0].Next().Sub(now)
+			now = time.Now().In(s.Location())
+			dur := job1.Next().Sub(now)
 			if dur > 0 {
 				select {
 				case <-ctx.Done():
@@ -114,6 +133,9 @@ LOOP:
 				}
 			}
 
+			// 队列中有任务，且已经到执行时间了，依次调度任务。
+
+			s.jobsMu.RLock()
 			for _, j := range s.jobs {
 				if j.State() == Cancelled {
 					continue
@@ -125,6 +147,7 @@ LOOP:
 					go j.run(now)
 				}
 			}
+			s.jobsMu.RUnlock()
 		}
 	}
 }
