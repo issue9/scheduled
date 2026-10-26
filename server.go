@@ -69,9 +69,10 @@ func (s *Server) Serve(ctx context.Context) error {
 		for _, j := range s.jobs {
 			j.locker.Lock()
 			j.state = Cancelled
+			j.next = time.Time{}
 			j.locker.Unlock()
 		}
-		s.jobs = s.jobs[:0]
+		s.jobs = nil // 直接释放，反正 Server 不具备重启条件
 	}()
 
 	// 初始化任务

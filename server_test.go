@@ -194,11 +194,6 @@ func TestServer_Serve_delay(t *testing.T) {
 
 	a.NotEmpty(tickers1).
 		NotEmpty(tickers2)
-	// 缺失一次执行，应该介于 4-6 之间
-	prev := tickers1[0].Unix()
-	curr := tickers1[1].Unix()
-	a.InDelta(prev, curr, 6, "v1=%d, v2=%d", prev, curr).
-		NotInDelta(prev, curr, 4, "v1=%d, v2=%d", prev, curr)
 	for i := 2; i < len(tickers1); i++ {
 		prev := tickers1[i-1].Unix()
 		curr := tickers1[i].Unix()

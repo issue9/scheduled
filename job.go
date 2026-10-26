@@ -98,11 +98,9 @@ func (j *Job) run(at time.Time) {
 
 	go j.srv.info.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.Title(), at.String()))
 
-	j.locker.Lock()
-	defer j.locker.Unlock()
-
 	defer func() {
 		if msg := recover(); msg != nil {
+			j.locker.Lock()
 			if err, ok := msg.(error); ok {
 				j.err = err
 			} else {
@@ -111,6 +109,7 @@ func (j *Job) run(at time.Time) {
 			if j.state != Cancelled {
 				j.state = Failed
 			}
+			j.locker.Unlock()
 			j.srv.erro.Error(j.err) // 不像 info 一样采用异步，可能会在执行过程中 j.err 被改值。
 		}
 	}()
@@ -119,21 +118,34 @@ func (j *Job) run(at time.Time) {
 		j.srv.erro.Error(j.err)
 
 		if j.state == Cancelled {
+			j.locker.Lock()
 			j.next = time.Time{}
+			j.locker.Unlock()
 			return
 		}
+
+		// j.f 可能会花费大量时间，所以重新计算 next
+		// 放在 locker 执行计算，防止 Next panic 导致阻塞。
+		next := j.scheduler.Next(time.Now().In(j.srv.Location()))
+		j.locker.Lock()
 		j.state = Failed
-		j.next = j.scheduler.Next(time.Now().In(j.srv.Location())) // j.f 可能会花费大量时间，所以重新计算 next
+		j.next = next
+		j.locker.Unlock()
 		return
 	}
 
 	// Cancelled 不用改状态为 Stopped，也不用生成 j.next 数据。
-	if j.state == Cancelled {
+	if j.State() == Cancelled {
 		return
 	}
 
+	// j.f 可能会花费大量时间，所以重新计算 next
+	// 放在 locker 执行计算，防止 Next panic 导致阻塞。
+	next := j.scheduler.Next(time.Now().In(j.srv.Location()))
+	j.locker.Lock()
 	j.state = Stopped
-	j.next = j.scheduler.Next(time.Now().In(j.srv.Location())) // j.f 可能会花费大量时间，所以重新计算 next
+	j.next = next
+	j.locker.Unlock()
 }
 
 // 初始化当前任务，获取其下次执行时间。
