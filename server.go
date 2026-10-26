@@ -12,7 +12,6 @@ import (
 // Server 管理所有的定时任务
 type Server struct {
 	jobs      []*Job
-	works     chan *Job     // 等待运行的任务
 	schedule  chan struct{} // 重新执行调度任务
 	cancelled bool          // 已经接受到 context.Context.Done() 的信号，表示服务已经被取消
 
@@ -41,7 +40,6 @@ func NewServer(loc *time.Location, erro, info Logger) *Server {
 
 	return &Server{
 		jobs:     make([]*Job, 0, 100),
-		works:    make(chan *Job, 100),
 		schedule: make(chan struct{}, 1),
 
 		loc:  loc,
@@ -87,8 +85,6 @@ LOOP:
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case j := <-s.works:
-			go j.run(now)
 		default: // 没有在执行的任务了，则计算一次时间
 			if len(s.jobs) == 0 {
 				<-time.After(time.Second) // 没有任务，1 秒后再次执行调试
@@ -116,9 +112,9 @@ LOOP:
 				}
 
 				if !j.Next().IsZero() && ((j.Next().Before(now) || j.Next().Equal(now)) &&
-					(!j.Delay() || j.State() != Running)) {
+					(!j.Delay() || (j.State() != Running && j.State() != Cancelled))) {
 					j.calcState(now) // 先计算状态，再异步运行。
-					s.works <- j
+					go j.run(now)
 				}
 			}
 		}
