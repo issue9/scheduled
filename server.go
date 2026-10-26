@@ -113,7 +113,7 @@ LOOP:
 
 			// 队列中有任务，但是第一个任务的调度时间 0，表示所有的任务都不需要执行。
 			// 那么就创建一个 1 秒的定时器，看看一秒之后有没有新的任务加入且需要执行的。
-			if job1.next.IsZero() {
+			if job1.Next().IsZero() {
 				<-time.After(time.Second)
 				continue LOOP
 			}
@@ -144,7 +144,7 @@ LOOP:
 				if !j.Next().IsZero() && ((j.Next().Before(now) || j.Next().Equal(now)) &&
 					(!j.Delay() || (j.State() != Running && j.State() != Cancelled))) {
 					j.calcState(now) // 先计算状态，再异步运行。
-					go j.run(now)
+					s.wait.Go(func() { j.run(now) })
 				}
 			}
 			s.jobsMu.RUnlock()

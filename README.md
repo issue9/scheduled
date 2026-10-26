@@ -20,14 +20,14 @@ scheduled 是一个计划任务管理工具
 ```go
 srv := scheduled.NewServer(time.UTC, nil, nil)
 
-ticker := func() error {
-    _,err := fmt.Println("ticker @ ", time.Now())
+ticker := func(t time.Time) error {
+    _,err := fmt.Println("ticker @ ", t)
     return err
 }
 
 
-expr := func() error {
-    _,err := fmt.Println("cron @ ", time.Now())
+expr := func(t time.Time) error {
+    _,err := fmt.Println("cron @ ", t)
     return err
 }
 

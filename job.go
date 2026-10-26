@@ -91,9 +91,6 @@ func (j *Job) calcState(now time.Time) {
 
 // 运行当前的任务
 func (j *Job) run(at time.Time) {
-	j.srv.wait.Add(1)
-	defer j.srv.wait.Done()
-
 	// 可能会存在通过 Server.New 返回的函数主动取消单个 Job 的方式，所以还要考虑 j.State 的值。
 	if j.State() == Cancelled {
 		return
@@ -103,36 +100,43 @@ func (j *Job) run(at time.Time) {
 
 	defer func() {
 		if msg := recover(); msg != nil {
-			j.locker.Lock()
-			if err, ok := msg.(error); ok {
-				j.err = err
-			} else {
-				j.err = localeutil.Error("recover msg %v", msg)
+			err, ok := msg.(error)
+			if !ok {
+				err = localeutil.Error("recover msg %v", msg)
 			}
+
+			next := j.scheduler.Next(at)
+
+			j.locker.Lock()
 			if j.state != Cancelled {
 				j.state = Failed
 			}
+			j.err = err
+			j.next = next
 			j.locker.Unlock()
-			j.srv.erro.Error(j.err) // 不像 info 一样采用异步，可能会在执行过程中 j.err 被改值。
+
+			j.srv.erro.Error(err) // 不像 info 一样采用异步，可能会在执行过程中 j.err 被改值。
 		}
 	}()
 
-	if j.err = j.f(at); j.err != nil {
-		j.srv.erro.Error(j.err)
+	if err := j.f(at); err != nil {
+		j.srv.erro.Error(err)
 
-		if j.state == Cancelled {
+		if j.State() == Cancelled { // Cancelled 不需要改状态
 			j.locker.Lock()
 			j.next = time.Time{}
+			j.err = err
 			j.locker.Unlock()
 			return
 		}
 
 		// j.f 可能会花费大量时间，所以重新计算 next
 		// 放在 locker 执行计算，防止 Next panic 导致阻塞。
-		next := j.scheduler.Next(time.Now().In(j.srv.Location()))
+		next := j.scheduler.Next(at)
 		j.locker.Lock()
 		j.state = Failed
 		j.next = next
+		j.err = err
 		j.locker.Unlock()
 		return
 	}
@@ -144,7 +148,7 @@ func (j *Job) run(at time.Time) {
 
 	// j.f 可能会花费大量时间，所以重新计算 next
 	// 放在 locker 执行计算，防止 Next panic 导致阻塞。
-	next := j.scheduler.Next(time.Now().In(j.srv.Location()))
+	next := j.scheduler.Next(at)
 	j.locker.Lock()
 	j.state = Stopped
 	j.next = next
@@ -160,7 +164,9 @@ func (j *Job) init(now time.Time) {
 
 func sortJobs(jobs []*Job) {
 	slices.SortFunc(jobs, func(i, j *Job) int {
-		zi, zj := i.next.IsZero(), j.next.IsZero()
+		ni, nj := i.Next(), j.Next()
+
+		zi, zj := ni.IsZero(), nj.IsZero()
 		switch {
 		case zi && zj:
 			return 0
@@ -169,17 +175,19 @@ func sortJobs(jobs []*Job) {
 		case zj:
 			return -1
 		}
-		return i.next.Compare(j.next)
+
+		return ni.Compare(nj)
 	})
 }
 
 // Jobs 返回所有注册的任务
 func (s *Server) Jobs() iter.Seq[*Job] {
-	return func(yield func(*Job) bool) {
-		s.jobsMu.RLock()
-		defer s.jobsMu.RUnlock()
+	s.jobsMu.RLock()
+	jobs := slices.Clone(s.jobs)
+	s.jobsMu.RUnlock()
 
-		for _, job := range s.jobs {
+	return func(yield func(*Job) bool) {
+		for _, job := range jobs {
 			if !yield(job) {
 				break
 			}
@@ -239,8 +247,9 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, 
 
 	if s.running { // 服务已经运行，则需要触发调度任务。
 		job.init(time.Now().In(s.Location()))
-		if len(s.schedule) == 0 { // 只有在 s.schedule 为空时，才需要通知 Server 要执行调度任务了
-			s.schedule <- struct{}{}
+		select {
+		case s.schedule <- struct{}{}:
+		default:
 		}
 	}
 
