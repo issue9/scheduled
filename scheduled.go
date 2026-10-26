@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2018-2024 caixw
+// SPDX-FileCopyrightText: 2018-2026 caixw
 //
 // SPDX-License-Identifier: MIT
 
@@ -29,14 +29,23 @@ const (
 	Stopped State = iota
 	Running
 	Failed
+	Cancelled // 取消，一般由用户主动发起，比如：Server 关闭，或是 Server.New 返回的函数主动关闭。
 )
 
-var errServerRunning = localeutil.Error("server is running, cannot start again")
+var (
+	errServerRunning   = localeutil.Error("server is running, cannot start again")
+	errServerCancelled = localeutil.Error("server is cancelled, cannot start again")
+)
 
 // ErrServerRunning 表示 [Server] 已经处于运行状态
 //
 // 当多次调用 [Server.Serve] 时，可能返回此错误信息。
 func ErrServerRunning() error { return errServerRunning }
+
+// ErrServerCancelled 表示 [Server] 已经被取消
+//
+// 当 [Server.Serve] 的 ctx 已经 Done 时，可能返回此错误信息。
+func ErrServerCancelled() error { return errServerCancelled }
 
 type (
 	Scheduler     = schedulers.Scheduler
@@ -64,15 +73,17 @@ type (
 
 var (
 	stateStringMap = map[State]string{
-		Stopped: "stopped",
-		Running: "running",
-		Failed:  "failed",
+		Stopped:   "stopped",
+		Running:   "running",
+		Failed:    "failed",
+		Cancelled: "cancelled",
 	}
 
 	stringStateMap = map[string]State{
-		"stopped": Stopped,
-		"running": Running,
-		"failed":  Failed,
+		"stopped":   Stopped,
+		"running":   Running,
+		"failed":    Failed,
+		"cancelled": Cancelled,
 	}
 )
 

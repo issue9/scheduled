@@ -185,8 +185,8 @@ func TestServer_Cron(t *testing.T) {
 	a := assert.New(t, false)
 
 	srv := NewServer(nil, nil, nil)
-	srv.Cron(localeutil.StringPhrase("test"), nil, "* * * 3-7 * *", false)
+	srv.Cron(localeutil.StringPhrase("test"), succFunc, "* * * 3-7 * *", false)
 	a.Panic(func() {
-		srv.Cron(localeutil.StringPhrase("test"), nil, "* * * 3-7a * *", false)
+		srv.Cron(localeutil.StringPhrase("test"), succFunc, "* * * 3-7a * *", false)
 	})
 }

@@ -11,9 +11,10 @@ import (
 
 // Server 管理所有的定时任务
 type Server struct {
-	jobs     []*Job
-	works    chan *Job     // 等待运行的任务
-	schedule chan struct{} // 重新执行调度任务
+	jobs      []*Job
+	works     chan *Job     // 等待运行的任务
+	schedule  chan struct{} // 重新执行调度任务
+	cancelled bool          // 已经接受到 context.Context.Done() 的信号，表示服务已经被取消
 
 	loc        *time.Location
 	running    bool
@@ -54,6 +55,9 @@ func (s *Server) Location() *time.Location { return s.loc }
 
 // Serve 运行服务
 func (s *Server) Serve(ctx context.Context) error {
+	if s.cancelled {
+		return ErrServerCancelled()
+	}
 	if s.running {
 		return ErrServerRunning()
 	}
@@ -61,6 +65,15 @@ func (s *Server) Serve(ctx context.Context) error {
 	s.running = true
 	defer func() {
 		s.running = false
+		s.cancelled = true
+
+		// 设置 jobs 的状态，并清空任务列表
+		for _, j := range s.jobs {
+			j.locker.Lock()
+			j.state = Cancelled
+			j.locker.Unlock()
+		}
+		s.jobs = s.jobs[:0]
 	}()
 
 	// 初始化任务
@@ -73,8 +86,6 @@ LOOP:
 	for {
 		select {
 		case <-ctx.Done():
-			close(s.works)      // 所有准备运行的任务都取消
-			s.jobs = s.jobs[:0] // 清空所有的任务
 			return ctx.Err()
 		case j := <-s.works:
 			go j.run(now)
@@ -100,6 +111,10 @@ LOOP:
 			}
 
 			for _, j := range s.jobs {
+				if j.State() == Cancelled {
+					continue
+				}
+
 				if !j.Next().IsZero() && ((j.Next().Before(now) || j.Next().Equal(now)) &&
 					(!j.Delay() || j.State() != Running)) {
 					j.calcState(now) // 先计算状态，再异步运行。

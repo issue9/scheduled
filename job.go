@@ -91,6 +91,11 @@ func (j *Job) calcState(now time.Time) {
 
 // 运行当前的任务
 func (j *Job) run(at time.Time) {
+	// 可能会存在通过 Server.New 返回的函数主动取消单个 Job 的方式，所以还要考虑 j.State 的值。
+	if j.State() == Cancelled {
+		return
+	}
+
 	go j.srv.info.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.Title(), at.String()))
 
 	j.locker.Lock()
@@ -103,18 +108,31 @@ func (j *Job) run(at time.Time) {
 			} else {
 				j.err = localeutil.Error("recover msg %v", msg)
 			}
-			j.state = Failed
+			if j.state != Cancelled {
+				j.state = Failed
+			}
 			j.srv.erro.Error(j.err) // 不像 info 一样采用异步，可能会在执行过程中 j.err 被改值。
 		}
 	}()
 
 	if j.err = j.f(at); j.err != nil {
-		j.state = Failed
 		j.srv.erro.Error(j.err)
-	} else {
-		j.state = Stopped
+
+		if j.state == Cancelled {
+			j.next = time.Time{}
+			return
+		}
+		j.state = Failed
+		j.next = j.scheduler.Next(time.Now().In(j.srv.Location())) // j.f 可能会花费大量时间，所以重新计算 next
+		return
 	}
 
+	// Cancelled 不用改状态为 Stopped，也不用生成 j.next 数据。
+	if j.state == Cancelled {
+		return
+	}
+
+	j.state = Stopped
 	j.next = j.scheduler.Next(time.Now().In(j.srv.Location())) // j.f 可能会花费大量时间，所以重新计算 next
 }
 
@@ -175,9 +193,21 @@ func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time, delay boo
 // New 添加一个新的定时任务
 //
 // title 任务的简要描述；
-// delay 是否从任务执行完之后，才开始计算下个执行的时间点。
+// delay 是否从任务执行完之后，才开始计算下个执行的时间点；
+// f 定时任务实际执行的函数；
+// scheduler 定时任务的调度器；
 // 返回一个取消当前任务的方法，同时会从列表中删除。
 func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, delay bool) context.CancelFunc {
+	if scheduler == nil {
+		panic("参数 scheduler 不能为空")
+	}
+	if f == nil {
+		panic("参数 f 不能为空")
+	}
+	if s.cancelled {
+		panic(ErrServerCancelled())
+	}
+
 	job := &Job{
 		srv:       s,
 		scheduler: scheduler,
@@ -193,6 +223,11 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, 
 	}
 
 	return func() {
+		job.locker.Lock()
+		job.state = Cancelled
+		job.next = time.Time{}
+		job.locker.Unlock()
+
 		s.jobs = slices.DeleteFunc(s.jobs, func(e *Job) bool { return e == job })
 	}
 }
