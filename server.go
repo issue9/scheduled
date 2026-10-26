@@ -67,7 +67,6 @@ func (s *Server) Serve(ctx context.Context) error {
 		return ErrServerRunning()
 	}
 
-	s.running = true
 	defer func() {
 		s.running = false
 		s.cancelled = true
@@ -93,6 +92,9 @@ func (s *Server) Serve(ctx context.Context) error {
 		job.init(now)
 	}
 	s.jobsMu.RUnlock()
+
+	// jobs 初始化完成之后再设置 s.running，防止 Server.New 中再次调用 job.init
+	s.running = true
 
 LOOP:
 	for {

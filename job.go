@@ -146,8 +146,8 @@ func (j *Job) run(at time.Time) {
 // 初始化当前任务，获取其下次执行时间。
 func (j *Job) init(now time.Time) {
 	j.locker.Lock()
-	defer j.locker.Unlock()
 	j.next = j.scheduler.Next(now)
+	j.locker.Unlock()
 }
 
 func sortJobs(jobs []*Job) {
