@@ -157,7 +157,8 @@ LOOP:
 				if !j.Next().IsZero() && ((j.Next().Before(now) || j.Next().Equal(now)) &&
 					(j.State() != Running && j.State() != Cancelled)) {
 					j.calcState(now) // 先计算状态，再异步运行。
-					s.wait.Go(func() { j.run(now) })
+					n := now         // 保证下面的异步能得到正确的 now 值
+					s.wait.Go(func() { j.run(n) })
 				}
 			}
 			s.jobsMu.RUnlock()

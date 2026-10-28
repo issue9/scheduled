@@ -1,36 +1,45 @@
 languages:
-    - und
+- und
 messages:
-    - key: all items are asterisk
-      message:
-        msg: all items are asterisk
-    - key: can not be empty
-      message:
-        msg: can not be empty
-    - key: cron syntax error %s
-      message:
-        msg: cron syntax error %s
-    - key: duplicate value %d
-      message:
-        msg: duplicate value %d
-    - key: incorrect length
-      message:
-        msg: incorrect length
-    - key: invalid direct %s
-      message:
-        msg: invalid direct %s
-    - key: invalid state %d
-      message:
-        msg: invalid state %d
-    - key: invalid state text %s
-      message:
-        msg: invalid state text %s
-    - key: recover msg %v
-      message:
-        msg: recover msg %v
-    - key: 'scheduled: start job %s at %s'
-      message:
-        msg: 'scheduled: start job %s at %s'
-    - key: the value %d out of range [%d,%d]
-      message:
-        msg: the value %d out of range [%d,%d]
+- key: can not be empty
+  message:
+    msg: can not be empty
+- key: cron syntax error %s
+  message:
+    msg: cron syntax error %s
+- key: duplicate value %d
+  message:
+    msg: duplicate value %d
+- key: incorrect length
+  message:
+    msg: incorrect length
+- key: invalid direct %s
+  message:
+    msg: invalid direct %s
+- key: invalid format %s
+  message:
+    msg: invalid format %s
+- key: invalid range %s
+  message:
+    msg: invalid range %s
+- key: invalid state %d
+  message:
+    msg: invalid state %d
+- key: invalid state text %s
+  message:
+    msg: invalid state text %s
+- key: recover msg %v
+  message:
+    msg: recover msg %v
+- key: "scheduled: start job %s at %s"
+  message:
+    msg: "scheduled: start job %s at %s"
+- key: server is cancelled, cannot start again
+  message:
+    msg: server is cancelled, cannot start again
+- key: server is running, cannot start again
+  message:
+    msg: server is running, cannot start again
+- key: the value %d out of range [%d,%d]
+  message:
+    msg: the value %d out of range [%d,%d]
