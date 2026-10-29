@@ -27,14 +27,36 @@ type Job struct {
 	scheduler Scheduler
 	title     localeutil.Stringer
 	f         JobFunc
+	first     time.Time
 
 	// 以下内容需要上锁
 
-	locker sync.RWMutex
-	state  State
-	err    error // 出错时的错误内容
-	prev   time.Time
-	next   time.Time
+	locker   sync.RWMutex
+	state    State
+	err      error // 出错时的错误内容
+	prev     time.Time
+	next     time.Time
+	count    int
+	errCount int
+}
+
+// First 第一次运行时间
+func (j *Job) First() time.Time { return j.first }
+
+// Count 运行的次数
+func (j *Job) Count() int {
+	j.locker.RLock()
+	c := j.count
+	j.locker.RUnlock()
+	return c
+}
+
+// ErrorCount 运行出错的次数
+func (j *Job) ErrorCount() int {
+	j.locker.RLock()
+	c := j.errCount
+	j.locker.RUnlock()
+	return c
 }
 
 // Title 简要描述信息
@@ -109,6 +131,7 @@ func (j *Job) run(at time.Time) {
 			if err != nil {
 				j.state = Failed
 				j.err = err
+				j.errCount++
 			}
 			j.next = j.scheduler.Next(time.Now().In(j.srv.Location())) // 由文档约定不能 panic
 		}
@@ -132,6 +155,7 @@ func (j *Job) run(at time.Time) {
 		j.locker.Unlock()
 		return
 	}
+	j.count++
 
 	// Cancelled 不用改状态为 Stopped，也不用生成 j.next 数据。
 	if j.State() == Cancelled {
@@ -147,6 +171,7 @@ func (j *Job) run(at time.Time) {
 func (j *Job) init(now time.Time) {
 	j.locker.Lock()
 	j.next = j.scheduler.Next(now)
+	j.first = j.next
 	j.locker.Unlock()
 }
 

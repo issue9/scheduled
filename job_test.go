@@ -65,6 +65,7 @@ func TestJob_run(t *testing.T) {
 	j.init(now)
 	j.run(now)
 	a.Nil(j.Err()).
+		Equal(j.Count(), 1).
 		Equal(j.State(), Stopped).
 		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
 
