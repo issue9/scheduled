@@ -6,7 +6,6 @@ package scheduled
 
 import (
 	"context"
-	"iter"
 	"slices"
 	"sync"
 	"time"
@@ -194,18 +193,11 @@ func sortJobs(jobs []*Job) {
 }
 
 // Jobs 返回所有注册的任务
-func (s *Server) Jobs() iter.Seq[*Job] {
+func (s *Server) Jobs() []*Job {
 	s.jobsMu.RLock()
 	jobs := slices.Clone(s.jobs)
 	s.jobsMu.RUnlock()
-
-	return func(yield func(*Job) bool) {
-		for _, job := range jobs {
-			if !yield(job) {
-				break
-			}
-		}
-	}
+	return jobs
 }
 
 // Tick 添加一个新的定时任务

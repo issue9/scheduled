@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"slices"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -137,7 +136,7 @@ func TestServer_Serve_zero(t *testing.T) {
 			println("zero-ticker1", t.String())
 			return nil
 		}, zero{})
-		a.Equal(len(slices.Collect(srv.Jobs())), 1)
+		a.Length(srv.Jobs(), 1)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		go func() { srv.Serve(ctx) }()

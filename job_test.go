@@ -6,7 +6,6 @@ package scheduled
 
 import (
 	"errors"
-	"slices"
 	"testing"
 	"time"
 
@@ -153,12 +152,12 @@ func TestServer_Jobs(t *testing.T) {
 	srv.At(localeutil.StringPhrase("j3"), succFunc, now)
 	d := srv.At(localeutil.StringPhrase("j2"), succFunc, now)
 
-	jobs := slices.Collect(srv.Jobs())
+	jobs := srv.Jobs()
 	l := len(jobs)
 	a.Length(srv.jobs, l)
 
 	d()
-	jobs = slices.Collect(srv.Jobs())
+	jobs = srv.Jobs()
 	a.Equal(len(jobs), len(srv.jobs)).
 		Equal(l-1, len(jobs))
 }
