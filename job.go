@@ -95,12 +95,9 @@ func (j *Job) Err() (err error) {
 	return err
 }
 
-func (j *Job) calcState(now time.Time) {
+func (j *Job) setRunning() {
 	j.locker.Lock()
 	j.state = Running
-	j.prev = j.next
-	// 由文档约定不能 panic，先计算 next，保证调用者重复调用 run 时能获取正确的 next。
-	j.next = j.scheduler.Next(now)
 	j.locker.Unlock()
 }
 
@@ -108,61 +105,75 @@ func (j *Job) calcState(now time.Time) {
 //
 // at 调用此函数的大致时间
 func (j *Job) run(at time.Time) {
-	// 可能会存在通过 Server.New 返回的函数主动取消单个 Job 的方式，所以还要考虑 j.State 的值。
-	if j.State() == Cancelled {
-		return
-	}
-
 	go j.srv.info.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.Title(), at.String()))
 
+	// NOTE: 此 defer 应该始终执行到最后，那里有触发任务调度的机制。
 	defer func() {
-		var err error
 		if msg := recover(); msg != nil {
-			var ok bool
-			if err, ok = msg.(error); !ok {
+			err, ok := msg.(error)
+			if !ok {
 				err = localeutil.Error("recover msg %v", msg)
 			}
-			go j.srv.erro.Error(err)
+			j.calcFailedState(err)
 		}
 
-		j.locker.Lock()
-		if j.state != Cancelled {
-			if err != nil {
-				j.state = Failed
-				j.err = err
-				j.errCount++
-			}
-			j.next = j.scheduler.Next(time.Now().In(j.srv.Location())) // 由文档约定不能 panic
+		// 一旦有一个 job 的 next 重算，需要重新调度任务。
+		select {
+		case j.srv.schedule <- struct{}{}:
+		default:
 		}
-		j.locker.Unlock()
 	}()
 
 	if err := j.f(at); err != nil {
-		j.srv.erro.Error(err)
+		j.calcFailedState(err)
+		return
+	}
 
-		if j.State() == Cancelled { // Cancelled 不需要改状态
-			j.locker.Lock()
-			j.next = time.Time{}
-			j.err = err
-			j.locker.Unlock()
-			return
-		}
+	j.calcStoppedState()
+}
 
-		j.locker.Lock()
-		j.state = Failed
-		j.err = err
+func (j *Job) calcStoppedState() {
+	j.locker.Lock()
+	if j.state == Cancelled {
+		j.next = time.Time{}
 		j.locker.Unlock()
 		return
 	}
-	j.count++
+	j.locker.Unlock()
 
-	// Cancelled 不用改状态为 Stopped，也不用生成 j.next 数据。
-	if j.State() == Cancelled {
-		return
-	}
+	now := time.Now().In(j.srv.Location())
+	next := j.scheduler.Next(now) // 由文档约定不能 panic
 
 	j.locker.Lock()
+	j.prev = j.next
+	j.next = next
 	j.state = Stopped
+	j.count++
+	j.locker.Unlock()
+}
+
+func (j *Job) calcFailedState(err error) {
+	go j.srv.erro.Error(err)
+
+	j.locker.Lock()
+	if j.state == Cancelled {
+		j.err = err
+		j.next = time.Time{}
+		j.locker.Unlock()
+		return
+	}
+	j.locker.Unlock()
+
+	now := time.Now().In(j.srv.Location())
+	next := j.scheduler.Next(now) // 由文档约定不能 panic
+
+	j.locker.Lock()
+	j.err = err
+	j.errCount++
+	j.prev = j.next
+	j.next = next
+	j.state = Failed
+	j.count++
 	j.locker.Unlock()
 }
 

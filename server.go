@@ -103,6 +103,7 @@ LOOP:
 			return ctx.Err()
 		default: // 没有在执行的任务了，则计算一次时间
 			var job1 *Job
+
 			s.jobsMu.Lock()
 			if len(s.jobs) == 0 {
 				s.jobsMu.Unlock()
@@ -150,15 +151,24 @@ LOOP:
 
 			s.jobsMu.RLock()
 			for _, j := range s.jobs {
-				if j.State() == Cancelled {
+				// 可能会存在通过 Server.New 返回的函数主动取消单个 Job 的方式，所以还要考虑 j.State 的值。
+				if j.State() == Cancelled || j.State() == Running || j.Next().IsZero() {
 					continue
 				}
 
-				if !j.Next().IsZero() && ((j.Next().Before(now) || j.Next().Equal(now)) &&
-					(j.State() != Running && j.State() != Cancelled)) {
-					j.calcState(now) // 先计算状态，再异步运行。
-					n := now         // 保证下面的异步能得到正确的 now 值
+				if dur := j.Next().Sub(now); dur <= 0 {
+					j.setRunning() // 先计算状态，再异步运行。
+					n := now       // 保证下面的异步能得到正确的 now 值
 					s.wait.Go(func() { j.run(n) })
+				} else {
+					// 这是个有序的队列，只要第一个的时间不符合要求，后续的肯定不符合。
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					case <-time.After(dur):
+					case <-s.schedule:
+					}
+					break // break 当前 for，才能正确调用 jobsMu.RUnlock
 				}
 			}
 			s.jobsMu.RUnlock()

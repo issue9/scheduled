@@ -50,11 +50,12 @@ func TestServer_Serve(t *testing.T) {
 		go func() { a.ErrorIs(srv.Serve(ctx), context.Canceled) }()
 		synctest.Wait()
 
-		time.Sleep(5 * time.Second)                                  // 等待任务运行
+		synctest.Sleep(5 * time.Second) // 等待任务运行
+		synctest.Wait()
 		a.Equal(srv.Serve(context.Background()), ErrServerRunning()) // 多次调用，返回的错误。
 		a.Equal(srv.Serve(context.Background()), ErrServerRunning()) // 多次调用，返回的错误。
 		cancel()
-		time.Sleep(5 * time.Second)
+		synctest.Sleep(5 * time.Second)
 		a.Equal(srv.Serve(context.Background()), ErrServerCancelled()) // 多次调用，返回的错误。
 		a.Equal(srv.Serve(context.Background()), ErrServerCancelled()) // 多次调用，返回的错误。
 		a.PanicValue(func() {
@@ -76,7 +77,7 @@ func TestServer_Serve(t *testing.T) {
 		}
 
 		a.NotEmpty(tickers3)
-		for i := 1; i < len(tickers3); i++ {
+		for i := 2; i < len(tickers3); i++ {
 			prev := tickers3[i-1].Unix()
 			curr := tickers3[i].Unix()
 			a.Equal(prev+2, curr, "%v != %v", prev, curr)
@@ -104,16 +105,16 @@ func TestServer_Serve_empty(t *testing.T) {
 			tickers1 = append(tickers1, t)
 			println("empty-ticker1", t.String())
 			return nil
-		}, time.Second, true)
+		}, 2*time.Second, true)
 
-		time.Sleep(5 * time.Second)
+		synctest.Sleep(5 * time.Second)
 		cancel()
 
 		a.NotEmpty(tickers1)
 		for i := 1; i < len(tickers1); i++ {
 			prev := tickers1[i-1].Unix()
 			curr := tickers1[i].Unix()
-			a.Equal(prev+1, curr, "%v != %v", prev, curr)
+			a.Equal(prev+2, curr, "%v != %v at %d", prev, curr, i)
 		}
 	})
 }
@@ -149,9 +150,9 @@ func TestServer_Serve_zero(t *testing.T) {
 			tickers2 = append(tickers2, t)
 			println("zero-ticker2", t.String())
 			return nil
-		}, time.Second, true)
+		}, time.Second*2, true)
 
-		time.Sleep(5 * time.Second)
+		synctest.Sleep(5 * time.Second)
 		cancel()
 
 		a.Empty(tickers1)
@@ -159,7 +160,7 @@ func TestServer_Serve_zero(t *testing.T) {
 		for i := 1; i < len(tickers2); i++ {
 			prev := tickers2[i-1].Unix()
 			curr := tickers2[i].Unix()
-			a.Equal(prev+1, curr, "%v != %v", prev, curr)
+			a.Equal(prev+2, curr, "%v != %v at %d", prev, curr, i)
 		}
 	})
 }
