@@ -20,8 +20,19 @@ import (
 // JobFunc 每一个定时任务实际上执行的函数签名
 type JobFunc = func(time.Time) error
 
-// Job 定时任务
+// Job 定时任务的快照信息
 type Job struct {
+	First    time.Time           // 第一次运行时间
+	Count    int                 // 运行的次数
+	ErrCount int                 // 运行出错的次数
+	Title    localeutil.Stringer // 简要描述信息
+	Next     time.Time           // 返回下次执行的时间点
+	Prev     time.Time           // 当前正在执行或是上次执行的时间点
+	State    State               // 获取当前的状态
+	Err      error               // 返回当前的错误信息
+}
+
+type job struct {
 	srv       *Server
 	scheduler Scheduler
 	title     localeutil.Stringer
@@ -39,63 +50,7 @@ type Job struct {
 	errCount int
 }
 
-// First 第一次运行时间
-func (j *Job) First() time.Time { return j.first }
-
-// Count 运行的次数
-func (j *Job) Count() int {
-	j.locker.RLock()
-	c := j.count
-	j.locker.RUnlock()
-	return c
-}
-
-// ErrorCount 运行出错的次数
-func (j *Job) ErrorCount() int {
-	j.locker.RLock()
-	c := j.errCount
-	j.locker.RUnlock()
-	return c
-}
-
-// Title 简要描述信息
-func (j *Job) Title() localeutil.Stringer { return j.title }
-
-// Next 返回下次执行的时间点
-//
-// 如果返回值的 IsZero() 为 true，则表示该任务不需要再执行。
-func (j *Job) Next() (t time.Time) {
-	j.locker.RLock()
-	t = j.next
-	j.locker.RUnlock()
-	return t
-}
-
-// Prev 当前正在执行或是上次执行的时间点
-func (j *Job) Prev() (t time.Time) {
-	j.locker.RLock()
-	t = j.prev
-	j.locker.RUnlock()
-	return t
-}
-
-// State 获取当前的状态
-func (j *Job) State() (s State) {
-	j.locker.RLock()
-	s = j.state
-	j.locker.RUnlock()
-	return
-}
-
-// Err 返回当前的错误信息
-func (j *Job) Err() (err error) {
-	j.locker.RLock()
-	err = j.err
-	j.locker.RUnlock()
-	return err
-}
-
-func (j *Job) setRunning() {
+func (j *job) setRunning() {
 	j.locker.Lock()
 	j.state = Running
 	j.locker.Unlock()
@@ -104,8 +59,8 @@ func (j *Job) setRunning() {
 // 运行当前的任务
 //
 // at 调用此函数的大致时间
-func (j *Job) run(at time.Time) {
-	go j.srv.info.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.Title(), at.String()))
+func (j *job) run(at time.Time) {
+	go j.srv.info.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.title, at.String()))
 
 	// NOTE: 此 defer 应该始终执行到最后，那里有触发任务调度的机制。
 	defer func() {
@@ -132,7 +87,7 @@ func (j *Job) run(at time.Time) {
 	j.calcStoppedState()
 }
 
-func (j *Job) calcStoppedState() {
+func (j *job) calcStoppedState() {
 	j.locker.Lock()
 	if j.state == Cancelled {
 		j.next = time.Time{}
@@ -152,7 +107,7 @@ func (j *Job) calcStoppedState() {
 	j.locker.Unlock()
 }
 
-func (j *Job) calcFailedState(err error) {
+func (j *job) calcFailedState(err error) {
 	go j.srv.erro.Error(err)
 
 	j.locker.Lock()
@@ -178,16 +133,22 @@ func (j *Job) calcFailedState(err error) {
 }
 
 // 初始化当前任务，获取其下次执行时间。
-func (j *Job) init(now time.Time) {
+func (j *job) init(now time.Time) {
 	j.locker.Lock()
 	j.next = j.scheduler.Next(now)
 	j.first = j.next
 	j.locker.Unlock()
 }
 
-func sortJobs(jobs []*Job) {
-	slices.SortFunc(jobs, func(i, j *Job) int {
-		ni, nj := i.Next(), j.Next()
+func sortJobs(jobs []*job) {
+	slices.SortFunc(jobs, func(i, j *job) int {
+		i.locker.RLock()
+		ni := i.next
+		i.locker.RUnlock()
+
+		i.locker.RLock()
+		nj := j.next
+		i.locker.RUnlock()
 
 		zi, zj := ni.IsZero(), nj.IsZero()
 		switch {
@@ -203,10 +164,24 @@ func sortJobs(jobs []*Job) {
 	})
 }
 
-// Jobs 返回所有注册的任务
+// Jobs 还回当前所有任务的快照
 func (s *Server) Jobs() []*Job {
+	jobs := make([]*Job, 0, len(s.jobs))
 	s.jobsMu.RLock()
-	jobs := slices.Clone(s.jobs)
+	for _, j := range s.jobs {
+		j.locker.RLock()
+		jobs = append(jobs, &Job{
+			First:    j.first,
+			Count:    j.count,
+			ErrCount: j.errCount,
+			Title:    j.title,
+			Next:     j.next,
+			Prev:     j.prev,
+			State:    j.state,
+			Err:      j.err,
+		})
+		j.locker.RUnlock()
+	}
 	s.jobsMu.RUnlock()
 	return jobs
 }
@@ -249,18 +224,18 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler) 
 		panic(ErrServerCancelled())
 	}
 
-	job := &Job{
+	j := &job{
 		srv:       s,
 		scheduler: scheduler,
 		title:     title,
 		f:         f,
 	}
 	s.jobsMu.Lock()
-	s.jobs = append(s.jobs, job)
+	s.jobs = append(s.jobs, j)
 	s.jobsMu.Unlock()
 
 	if s.running { // 服务已经运行，则需要触发调度任务。
-		job.init(time.Now().In(s.Location()))
+		j.init(time.Now().In(s.Location()))
 		select {
 		case s.schedule <- struct{}{}:
 		default:
@@ -268,13 +243,13 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler) 
 	}
 
 	return func() {
-		job.locker.Lock()
-		job.state = Cancelled
-		job.next = time.Time{}
-		job.locker.Unlock()
+		j.locker.Lock()
+		j.state = Cancelled
+		j.next = time.Time{}
+		j.locker.Unlock()
 
 		s.jobsMu.Lock()
-		s.jobs = slices.DeleteFunc(s.jobs, func(e *Job) bool { return e == job })
+		s.jobs = slices.DeleteFunc(s.jobs, func(e *job) bool { return e == j })
 		s.jobsMu.Unlock()
 	}
 }

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2018-2024 caixw
+// SPDX-FileCopyrightText: 2018-2026 caixw
 //
 // SPDX-License-Identifier: MIT
 
@@ -13,7 +13,7 @@ import (
 
 func BenchmarkSortJobs(b *testing.B) {
 	now := time.Now()
-	jobs := []*Job{
+	jobs := []*job{
 		{
 			title: localeutil.StringPhrase("1"),
 			next:  now.Add(1111),

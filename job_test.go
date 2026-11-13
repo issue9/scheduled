@@ -55,7 +55,7 @@ func TestJob_run(t *testing.T) {
 	}
 
 	now := time.Now()
-	j := &Job{
+	j := &job{
 		srv:       srv,
 		title:     localeutil.StringPhrase("succ"),
 		f:         succFunc,
@@ -63,13 +63,13 @@ func TestJob_run(t *testing.T) {
 	}
 	j.init(now)
 	j.run(now)
-	a.Nil(j.Err()).
-		Equal(j.Count(), 1).
-		Equal(j.State(), Stopped).
-		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
+	a.Nil(j.err).
+		Equal(j.count, 1).
+		Equal(j.state, Stopped).
+		Equal(j.next.Unix(), now.Add(1*time.Second).Unix())
 
 	now = time.Now()
-	j = &Job{
+	j = &job{
 		srv:       srv,
 		title:     localeutil.StringPhrase("erro"),
 		f:         erroFunc,
@@ -77,12 +77,12 @@ func TestJob_run(t *testing.T) {
 	}
 	j.init(now)
 	j.run(now)
-	a.NotNil(j.Err()).
-		Equal(j.State(), Failed).
-		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
+	a.NotNil(j.err).
+		Equal(j.state, Failed).
+		Equal(j.next.Unix(), now.Add(1*time.Second).Unix())
 
 	now = time.Now()
-	j = &Job{
+	j = &job{
 		srv:       srv,
 		title:     localeutil.StringPhrase("fail"),
 		f:         failFunc,
@@ -90,13 +90,13 @@ func TestJob_run(t *testing.T) {
 	}
 	j.init(now)
 	j.run(now)
-	a.NotNil(j.Err()).
-		Equal(j.State(), Failed).
-		Equal(j.Next().Unix(), now.Add(1*time.Second).Unix())
+	a.NotNil(j.err).
+		Equal(j.state, Failed).
+		Equal(j.next.Unix(), now.Add(1*time.Second).Unix())
 
 	// delay == true
 	now = time.Now()
-	j = &Job{
+	j = &job{
 		srv:       srv,
 		title:     localeutil.StringPhrase("delay=true"),
 		f:         delayFunc,
@@ -104,16 +104,16 @@ func TestJob_run(t *testing.T) {
 	}
 	j.init(now)
 	j.run(now)
-	a.Nil(j.Err()).
-		Equal(j.State(), Stopped).
-		Equal(j.Next().Unix(), now.Add(3*time.Second).Unix()) // delayFunc 延时两秒
+	a.Nil(j.err).
+		Equal(j.state, Stopped).
+		Equal(j.next.Unix(), now.Add(3*time.Second).Unix()) // delayFunc 延时两秒
 }
 
 func TestSortJobs(t *testing.T) {
 	a := assert.New(t, false)
 
 	now := time.Now()
-	jobs := []*Job{
+	jobs := []*job{
 		{
 			title: localeutil.StringPhrase("1"),
 			next:  now.Add(1111),
@@ -137,9 +137,9 @@ func TestSortJobs(t *testing.T) {
 	}
 
 	sortJobs(jobs)
-	a.Equal(jobs[0].Title(), localeutil.StringPhrase("3")).
-		Equal(jobs[1].Title(), localeutil.StringPhrase("5")).
-		Equal(jobs[2].Title(), localeutil.StringPhrase("1"))
+	a.Equal(jobs[0].title, localeutil.StringPhrase("3")).
+		Equal(jobs[1].title, localeutil.StringPhrase("5")).
+		Equal(jobs[2].title, localeutil.StringPhrase("1"))
 }
 
 func TestServer_Jobs(t *testing.T) {

@@ -13,7 +13,7 @@ import (
 // Server 管理所有的定时任务
 type Server struct {
 	jobsMu sync.RWMutex
-	jobs   []*Job
+	jobs   []*job
 	wait   sync.WaitGroup
 
 	schedule  chan struct{} // 重新执行调度任务
@@ -43,7 +43,7 @@ func NewServer(loc *time.Location, erro, info Logger) *Server {
 	}
 
 	return &Server{
-		jobs:     make([]*Job, 0, 100),
+		jobs:     make([]*job, 0, 100),
 		schedule: make(chan struct{}, 1),
 
 		loc:  loc,
@@ -102,7 +102,7 @@ LOOP:
 		case <-ctx.Done():
 			return ctx.Err()
 		default: // 没有在执行的任务了，则计算一次时间
-			var job1 *Job
+			var job1 *job
 
 			s.jobsMu.Lock()
 			if len(s.jobs) == 0 {
@@ -121,9 +121,13 @@ LOOP:
 				s.jobsMu.Unlock()
 			}
 
+			job1.locker.RLock()
+			j1next := job1.next
+			job1.locker.RUnlock()
+
 			// 队列中有任务，但是第一个任务的调度时间 0，表示所有的任务都不需要执行。
 			// 那么就创建一个 1 秒的定时器，看看一秒之后有没有新的任务加入且需要执行的。
-			if job1.Next().IsZero() {
+			if j1next.IsZero() {
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
@@ -136,7 +140,7 @@ LOOP:
 			// 队列中有任务，但是还没有到时间，创建定时器。
 
 			now = time.Now().In(s.Location())
-			dur := job1.Next().Sub(now)
+			dur := j1next.Sub(now)
 			if dur > 0 {
 				select {
 				case <-ctx.Done():
@@ -151,12 +155,17 @@ LOOP:
 
 			s.jobsMu.RLock()
 			for _, j := range s.jobs {
+				j.locker.RLock()
+				state := j.state
+				next := j.next
+				j.locker.RUnlock()
+
 				// 可能会存在通过 Server.New 返回的函数主动取消单个 Job 的方式，所以还要考虑 j.State 的值。
-				if j.State() == Cancelled || j.State() == Running || j.Next().IsZero() {
+				if state == Cancelled || state == Running || next.IsZero() {
 					continue
 				}
 
-				if dur := j.Next().Sub(now); dur <= 0 {
+				if dur := next.Sub(now); dur <= 0 {
 					j.setRunning() // 先计算状态，再异步运行。
 					n := now       // 保证下面的异步能得到正确的 now 值
 					s.wait.Go(func() { j.run(n) })
