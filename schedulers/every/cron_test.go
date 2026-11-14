@@ -105,6 +105,16 @@ func TestParseCron(t *testing.T) {
 			want: "2024-01-01T11:00:00Z",
 		},
 		{
+			name: "分钟步长",
+			spec: "0 */15 * * * *",
+			want: "2024-01-01T10:45:00Z",
+		},
+		{
+			name: "秒步长",
+			spec: "*/15 * * * * *",
+			want: "2024-01-01T10:30:45Z",
+		},
+		{
 			name: "@hourly",
 			spec: "@hourly",
 			want: "2024-01-01T11:00:00Z",
@@ -225,16 +235,16 @@ func TestParseCronError(t *testing.T) {
 			spec: "abc 0 0 * * *",
 		},
 		{
-			name: "重复值",
-			spec: "0 0,0 0 * * *",
+			name: "步长为零",
+			spec: "0 */0 * * * *",
 		},
 		{
-			name: "范围与值重复",
-			spec: "0 0 0 * 1-2,1 *",
+			name: "步长非数字",
+			spec: "0 */x * * * *",
 		},
 		{
-			name: "星期重复值",
-			spec: "0 0 0 * * 1,1",
+			name: "步长缺失",
+			spec: "0 */ * * * *",
 		},
 	}
 
@@ -262,10 +272,88 @@ func TestParseField(t *testing.T) {
 			want:  nil,
 		},
 		{
+			name:  "步长",
+			field: "*/15",
+			b:     minuteBound,
+			want:  []int{0, 15, 30, 45},
+		},
+		{
+			name:  "步长从字段最小值开始",
+			field: "*/10",
+			b:     dayBound,
+			want:  []int{1, 11, 21, 31},
+		},
+		{
+			name:   "步长为零",
+			field:  "*/0",
+			b:      minuteBound,
+			hasErr: true,
+		},
+		{
+			name:   "步长非数字",
+			field:  "*/x",
+			b:      minuteBound,
+			hasErr: true,
+		},
+		{
+			name:   "步长缺失",
+			field:  "*/",
+			b:      minuteBound,
+			hasErr: true,
+		},
+		{
+			name:  "有最小值",
+			field: "1/5",
+			b:     minuteBound,
+			want:  []int{1, 6, 11, 16, 21, 26, 31, 36, 41, 46, 51, 56},
+		},
+		{
+			name:  "有最小最大值",
+			field: "1-20/5",
+			b:     minuteBound,
+			want:  []int{1, 6, 11, 16},
+		},
+		{
+			name:  "步长+值",
+			field: "1-20/5,7,9",
+			b:     minuteBound,
+			want:  []int{1, 6, 7, 9, 11, 16},
+		},
+		{
+			name:  "重复的值",
+			field: "1-20/5,6,9,9",
+			b:     minuteBound,
+			want:  []int{1, 6, 9, 11, 16},
+		},
+		{
+			name:   "没有最小值",
+			field:  "-20/5",
+			b:      minuteBound,
+			hasErr: true,
+		},
+		{
+			name:   "最小值格式错误",
+			field:  "x-20/5",
+			b:      minuteBound,
+			hasErr: true,
+		},
+		{
+			name:   "最大值格式错误",
+			field:  "20-x/5",
+			b:      minuteBound,
+			hasErr: true,
+		},
+		{
 			name:  "单个值",
 			field: "5",
 			b:     minuteBound,
 			want:  []int{5},
+		},
+		{
+			name:   "包含空值",
+			field:  "5,,7",
+			b:      minuteBound,
+			hasErr: true,
 		},
 		{
 			name:  "逗号有序",
@@ -322,18 +410,6 @@ func TestParseField(t *testing.T) {
 			b:      minuteBound,
 			hasErr: true,
 		},
-		{
-			name:   "重复值",
-			field:  "1,1",
-			b:      minuteBound,
-			hasErr: true,
-		},
-		{
-			name:   "范围与值重复",
-			field:  "1-2,1",
-			b:      minuteBound,
-			hasErr: true,
-		},
 	}
 
 	for _, item := range data {
@@ -341,7 +417,7 @@ func TestParseField(t *testing.T) {
 			a := assert.New(t, false)
 			got, err := parseField(item.field, item.b)
 			if item.hasErr {
-				a.Error(err)
+				a.Error(err, "spec: %s,got:%v", item.field, got)
 				return
 			}
 			a.NotError(err).Equal(item.want, got)

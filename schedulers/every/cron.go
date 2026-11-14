@@ -58,6 +58,7 @@ func FromCron(spec string) schedulers.Scheduler {
 // 支持以下符号：
 //   - - 表示范围
 //   - , 表示和
+//   - */n n 为步长，* 表示当前域的最小和最大值，* 也可以自己指定，比如 5/10 表示从 5 开始，步长为 10，5-20/10 表示从 5 到 20，步长为 10
 //
 // 同时支持以下便捷指令：
 //
@@ -73,18 +74,18 @@ func FromCron(spec string) schedulers.Scheduler {
 func ParseCron(spec string) (schedulers.Scheduler, error) {
 	switch {
 	case spec == "":
-		return nil, syntaxError(localeutil.Phrase("can not be empty"))
+		return nil, syntaxError(localeutil.Error("can not be empty"))
 	case spec[0] == '@':
 		d, found := direct[spec]
 		if !found {
-			return nil, syntaxError(localeutil.Phrase("invalid direct %s", spec))
+			return nil, syntaxError(localeutil.Error("invalid direct %s", spec))
 		}
 		spec = d
 	}
 
 	fs := strings.Fields(spec)
 	if len(fs) != 6 {
-		return nil, syntaxError(localeutil.Phrase("incorrect length"))
+		return nil, syntaxError(localeutil.Error("incorrect length"))
 	}
 
 	var (
@@ -132,10 +133,60 @@ func parseField[T integer](field string, b bound[T]) ([]T, error) {
 		return nil, nil
 	}
 
-	fs := strings.FieldsFunc(field, func(r rune) bool { return r == ',' })
+	fs := strings.Split(field, ",")
 	list := make([]T, 0, len(fs))
 
 	for _, v := range fs {
+		v = strings.TrimSpace(v)
+
+		if v == "" {
+			return nil, syntaxError(localeutil.Error("invalid format %s", field))
+		}
+
+		if strings.Contains(v, "/") {
+			base, stepText, ok := strings.Cut(v, "/")
+			if !ok || stepText == "" || strings.Contains(stepText, "/") {
+				return nil, syntaxError(localeutil.Error("invalid format %s", v))
+			}
+
+			// 从 base 中获取最大和最小值
+
+			minV, maxV := b.min, b.max
+			if base != "*" {
+				minVal, maxVal, ok, err := parseRange(base, b)
+				if err != nil {
+					return nil, err
+				}
+				if !ok {
+					minV = T(minVal)
+				} else {
+					minV, maxV = T(minVal), T(maxVal)
+				}
+			}
+
+			// 解析步长
+			step, err := strconv.Atoi(stepText)
+			if err != nil || step <= 0 || maxV == -1 {
+				return nil, syntaxError(localeutil.Error("invalid format %s", v))
+			}
+
+			// 根据步长和范围将合法的值添加到 list
+			for n, max := int(minV), int(maxV); n <= max; {
+				list = append(list, T(n))
+				if step > max-n {
+					break
+				}
+				n += step
+			}
+
+			// 步长没有给定值
+			if len(list) == 0 {
+				return nil, syntaxError(localeutil.Error("invalid format %s", v))
+			}
+
+			continue
+		}
+
 		if len(v) <= 2 { // 少于 3 个字符，说明不可能有特殊字符。
 			n, err := strconv.Atoi(v)
 			if err != nil {
@@ -143,44 +194,16 @@ func parseField[T integer](field string, b bound[T]) ([]T, error) {
 			}
 
 			if !b.valid(n) {
-				return nil, syntaxError(localeutil.Phrase("the value %d out of range [%d,%d]", n, b.min, b.max))
+				return nil, syntaxError(localeutil.Error("the value %d out of range [%d,%d]", n, b.min, b.max))
 			}
 
 			list = append(list, T(n))
 			continue
 		}
 
-		var n1, n2 int
-		hasRange := false
-
-		if before, after, ok := strings.Cut(v, "-"); ok {
-			var err error
-
-			if n1, err = strconv.Atoi(before); err != nil {
-				return nil, syntaxError(localeutil.Phrase("invalid format %s", err))
-			}
-
-			if n2, err = strconv.Atoi(after); err != nil {
-				return nil, syntaxError(localeutil.Phrase("invalid format %s", err))
-			}
-
-			hasRange = true
-		} else {
-			n, err := strconv.Atoi(v)
-			if err != nil {
-				return nil, syntaxError(localeutil.Phrase("invalid format %s", err))
-			}
-			n1, n2 = n, n
-		}
-
-		if n1 > n2 {
-			return nil, syntaxError(localeutil.Phrase("invalid range %s", v))
-		}
-		if !b.valid(n1) {
-			return nil, syntaxError(localeutil.Phrase("the value %d out of range [%d,%d]", n1, b.min, b.max))
-		}
-		if !b.valid(n2) {
-			return nil, syntaxError(localeutil.Phrase("the value %d out of range [%d,%d]", n2, b.min, b.max))
+		n1, n2, hasRange, err := parseRange(v, b)
+		if err != nil {
+			return nil, err
 		}
 
 		if hasRange {
@@ -192,12 +215,42 @@ func parseField[T integer](field string, b bound[T]) ([]T, error) {
 		}
 	}
 
-	if indexes := sliceutil.Dup(list, func(i, j T) bool { return i == j }); len(indexes) > 0 {
-		return nil, syntaxError(localeutil.Phrase("duplicate value %d", list[indexes[0]]))
-	}
-
+	list = sliceutil.Unique(list, func(i, j T) bool { return i == j })
 	slices.Sort(list)
 	return list, nil
 }
 
-func syntaxError(s localeutil.Stringer) error { return localeutil.Error("cron syntax error %s", s) }
+func parseRange[T integer](field string, b bound[T]) (n1, n2 int, ok bool, err error) {
+	if before, after, oo := strings.Cut(field, "-"); oo {
+
+		if n1, err = strconv.Atoi(before); err != nil {
+			return 0, 0, false, syntaxError(localeutil.Error("invalid format %s", err))
+		}
+
+		if n2, err = strconv.Atoi(after); err != nil {
+			return 0, 0, false, syntaxError(localeutil.Error("invalid format %s", err))
+		}
+
+		ok = true
+	} else {
+		n, err := strconv.Atoi(field)
+		if err != nil {
+			return 0, 0, false, syntaxError(localeutil.Error("invalid format %s", err))
+		}
+		n1, n2 = n, n
+	}
+
+	if n1 > n2 {
+		return 0, 0, false, syntaxError(localeutil.Error("invalid range %s", field))
+	}
+	if !b.valid(n1) {
+		return 0, 0, false, syntaxError(localeutil.Error("the value %d out of range [%d,%d]", n1, b.min, b.max))
+	}
+	if !b.valid(n2) {
+		return 0, 0, false, syntaxError(localeutil.Error("the value %d out of range [%d,%d]", n2, b.min, b.max))
+	}
+
+	return
+}
+
+func syntaxError(s error) error { return localeutil.Error("cron syntax error %s", s) }
