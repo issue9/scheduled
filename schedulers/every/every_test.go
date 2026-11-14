@@ -581,3 +581,79 @@ func checkNext(t *testing.T, s schedulers.Scheduler, value, want string) {
 	w, err := time.Parse(time.RFC3339, want)
 	a.NotError(err).Equal(w, got)
 }
+
+// 参数值超出有效范围时应该 panic
+func TestEvery_outOfRange(t *testing.T) {
+	a := assert.New(t, false)
+
+	// 越界值：每一处都应该 panic
+	a.PanicString(func() {
+		Daily(nil, []int{60}, nil)
+	}, "参数 minutes 的值 60 超出范围 [0,59]")
+
+	a.Panic(func() { Daily([]int{24}, nil, nil) })        // hours 上限
+	a.Panic(func() { Daily([]int{-1}, nil, nil) })        // hours 下限
+	a.Panic(func() { Daily(nil, []int{-1}, nil) })        // minutes 下限
+	a.Panic(func() { Hourly(nil, []int{60}) })            // seconds 上限
+	a.Panic(func() { Monthly([]int{0}, nil, nil, nil) })  // days 下限
+	a.Panic(func() { Monthly([]int{32}, nil, nil, nil) }) // days 上限
+
+	a.Panic(func() { Yearly([]time.Month{0}, nil, nil, nil, nil, nil) }) // months 下限
+	a.PanicString(func() {
+		Yearly([]time.Month{13}, nil, nil, nil, nil, nil)
+	}, "参数 months 的值 13 超出范围 [1,12]") // months 上限，同时锁定输出为数字
+
+	a.Panic(func() { Weekly([]time.Weekday{-1}, nil, nil, nil) }) // weekdays 下限
+	a.Panic(func() { Weekly([]time.Weekday{7}, nil, nil, nil) })  // weekdays 上限
+
+	a.Panic(func() { Every(nil, nil, nil, nil, []int{24}, nil, nil) }) // 通过 Every 传入
+
+	// 边界值都是合法的
+	a.NotPanic(func() { Daily([]int{0, 23}, []int{0, 59}, []int{0, 59}) })
+	a.NotPanic(func() { Monthly([]int{1, 31}, nil, nil, nil) })
+	a.NotPanic(func() { Yearly([]time.Month{time.January, time.December}, nil, nil, nil, nil, nil) })
+	a.NotPanic(func() { Weekly([]time.Weekday{time.Sunday, time.Saturday}, nil, nil, nil) })
+}
+
+// 未排序
+func TestEvery_unsorted(t *testing.T) {
+	a := assert.New(t, false)
+
+	a.Panic(func() { Daily([]int{12, 5}, nil, nil) })        // hours
+	a.Panic(func() { Daily(nil, []int{30, 10}, nil) })       // minutes
+	a.Panic(func() { Hourly(nil, []int{30, 10}) })           // seconds
+	a.Panic(func() { Monthly([]int{31, 1}, nil, nil, nil) }) // days
+
+	a.PanicString(func() { // weekdays
+		Weekly([]time.Weekday{time.Saturday, time.Sunday}, nil, nil, nil)
+	}, "参数 weekdays 的值必须按升序排列")
+
+	a.Panic(func() { // months
+		Yearly([]time.Month{time.March, time.January}, nil, nil, nil, nil, nil)
+	})
+
+	a.Panic(func() { // years
+		Every([]int{minYear + 1, minYear}, nil, nil, nil, nil, nil, nil)
+	})
+
+	// 升序且无重复值才是合法的
+	a.NotPanic(func() { Daily([]int{5, 12}, nil, nil) })
+	a.NotPanic(func() { Daily(nil, []int{10, 30}, nil) })
+	a.NotPanic(func() { Every([]int{minYear, minYear + 1}, nil, nil, nil, nil, nil, nil) })
+}
+
+// 切片中存在重复值
+func TestEvery_duplicate(t *testing.T) {
+	a := assert.New(t, false)
+
+	a.Panic(func() { Daily([]int{5, 5}, nil, nil) }) // hours
+	a.PanicString(func() {
+		Daily(nil, []int{10, 10, 30}, nil)
+	}, "参数 minutes 的值存在重复项: 10") // minutes
+
+	a.Panic(func() { Hourly(nil, []int{30, 30}) })                                                // seconds
+	a.Panic(func() { Monthly([]int{1, 5, 5, 31}, nil, nil, nil) })                                // days
+	a.Panic(func() { Weekly([]time.Weekday{time.Sunday, time.Sunday}, nil, nil, nil) })           // weekdays
+	a.Panic(func() { Yearly([]time.Month{time.January, time.January}, nil, nil, nil, nil, nil) }) // months
+	a.Panic(func() { Every([]int{minYear, minYear}, nil, nil, nil, nil, nil, nil) })              // years
+}
