@@ -271,3 +271,35 @@ func TestServer_Serve_loc(t *testing.T) {
 		a.Equal(0, buf.Len(), buf.String())
 	})
 }
+
+// imm 由 Job 层实现：首次在服务启动时立即执行，之后的间隔仍然由 scheduler 决定。
+func TestServer_Tick_imm(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		a := assert.New(t, false)
+		srv := NewServer(nil, nil, nil)
+		a.NotNil(srv)
+
+		var got []time.Time
+		srv.Tick(localeutil.StringPhrase("imm"), func(n time.Time) error {
+			got = append(got, n)
+			return nil
+		}, 10*time.Second, true)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			srv.Serve(ctx)
+		}()
+
+		synctest.Sleep(25 * time.Second)
+		cancel()
+		<-done
+
+		// 0s、10s、20s 各一次
+		a.Length(got, 3)
+		for i := 1; i < len(got); i++ {
+			a.Equal(got[i].Sub(got[i-1]), 10*time.Second)
+		}
+	})
+}

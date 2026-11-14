@@ -11,14 +11,14 @@ import (
 	"github.com/issue9/assert/v6"
 )
 
-func TestTicker(t *testing.T) {
+func TestTick(t *testing.T) {
 	a := assert.New(t, false)
 
 	a.PanicString(func() {
-		Tick(300*time.Microsecond, false)
+		Tick(300 * time.Microsecond)
 	}, "参数 d 的值必须在 1 秒以上")
 
-	s := Tick(5*time.Minute, false)
+	s := Tick(5 * time.Minute)
 	a.NotNil(s)
 
 	now := time.Now()
@@ -28,18 +28,11 @@ func TestTicker(t *testing.T) {
 	next2 := s.Next(next1)
 	a.Equal(next2.Unix(), next1.Add(5*time.Minute).Unix())
 
-	// 与 next1 相同的值调用，返回值也相同
-	next3 := s.Next(now)
-	a.Equal(next3.Unix(), next1.Unix())
+	// 纯函数：相同的输入总是得到相同的返回值。
+	a.Equal(s.Next(now).Unix(), next1.Unix()).
+		Equal(s.Next(now).Unix(), next1.Unix())
 
-	// imm == false
-
-	s = Tick(5*time.Minute, true)
-	a.NotNil(s)
-	now = time.Now()
-	next1 = s.Next(now)
-	a.Equal(next1.Unix(), now.Unix())
-
-	next2 = s.Next(next1)
-	a.Equal(next2.Unix(), now.Add(5*time.Minute).Unix())
+	// 一个实例可以被多个任务共享。
+	other := Tick(5 * time.Minute)
+	a.Equal(other.Next(now).Unix(), next1.Unix())
 }

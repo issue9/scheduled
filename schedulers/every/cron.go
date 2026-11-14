@@ -77,7 +77,7 @@ func ParseCron(spec string) (schedulers.Scheduler, error) {
 	case spec == "":
 		return nil, syntaxError(localeutil.Phrase("can not be empty"))
 	case spec == "@reboot":
-		return at.At(time.Now()), nil
+		return at.At(time.Now().Add(time.Second)), nil
 	case spec[0] == '@':
 		d, found := direct[spec]
 		if !found {

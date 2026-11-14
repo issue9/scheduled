@@ -48,8 +48,8 @@ func TestJob_run(t *testing.T) {
 	term := NewTermLogger(message.NewPrinter(language.SimplifiedChinese))
 	srv := NewServer(nil, term, term)
 
-	newTickerJob := func(duration time.Duration, imm bool) schedulers.Scheduler {
-		s := ticker.Tick(duration, imm)
+	newTickerJob := func(duration time.Duration) schedulers.Scheduler {
+		s := ticker.Tick(duration)
 		a.NotNil(s)
 		return s
 	}
@@ -59,7 +59,7 @@ func TestJob_run(t *testing.T) {
 		srv:       srv,
 		title:     localeutil.StringPhrase("succ"),
 		f:         succFunc,
-		scheduler: newTickerJob(time.Second, false),
+		scheduler: newTickerJob(time.Second),
 	}
 	j.init(now)
 	j.run(now)
@@ -73,7 +73,7 @@ func TestJob_run(t *testing.T) {
 		srv:       srv,
 		title:     localeutil.StringPhrase("erro"),
 		f:         erroFunc,
-		scheduler: newTickerJob(time.Second, false),
+		scheduler: newTickerJob(time.Second),
 	}
 	j.init(now)
 	j.run(now)
@@ -86,7 +86,7 @@ func TestJob_run(t *testing.T) {
 		srv:       srv,
 		title:     localeutil.StringPhrase("fail"),
 		f:         failFunc,
-		scheduler: newTickerJob(time.Second, false),
+		scheduler: newTickerJob(time.Second),
 	}
 	j.init(now)
 	j.run(now)
@@ -100,7 +100,7 @@ func TestJob_run(t *testing.T) {
 		srv:       srv,
 		title:     localeutil.StringPhrase("delay=true"),
 		f:         delayFunc,
-		scheduler: newTickerJob(time.Second, false),
+		scheduler: newTickerJob(time.Second),
 	}
 	j.init(now)
 	j.run(now)

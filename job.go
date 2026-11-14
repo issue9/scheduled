@@ -38,6 +38,7 @@ type job struct {
 	title     localeutil.Stringer
 	f         JobFunc
 	first     time.Time
+	imm       bool // 首次调度时是否立即执行，只在 [job.init] 中使用
 
 	// 以下内容需要上锁
 
@@ -122,6 +123,11 @@ func (j *job) finish(err error) {
 	// 如果放在锁外，对于 Cancelled 状态又会浪费一次 Next 的调用。
 	// 把锁拆分为两段，那么就无法保证状态是统一的。
 	j.prev, j.next = j.next, j.scheduler.Next(now)
+
+	// 时间上没有推进
+	if !j.next.After(j.prev) {
+		panic(localeutil.Error("TODO"))
+	}
 }
 
 // 初始化当前任务，获取其下次执行时间。
@@ -136,7 +142,12 @@ func (j *job) init(now time.Time) {
 		j.locker.Unlock()
 	}()
 
-	j.next = j.scheduler.Next(now) // fromRecover 未设置 j.first，所以此语句要放前面。
+	if j.imm { // 首次立即执行，不需要也不应该经过 scheduler
+		j.next = now
+	} else {
+		// fromRecover 未设置 j.first，所以此语句要放前面。
+		j.next = j.scheduler.Next(now)
+	}
 	j.first = j.next
 }
 
@@ -197,7 +208,7 @@ func (s *Server) Jobs() []*Job {
 //
 // imm 表示是否先执行一次任务！
 func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, imm bool) context.CancelFunc {
-	return s.New(title, f, ticker.Tick(dur, imm))
+	return s.newJob(title, f, ticker.Tick(dur), imm)
 }
 
 // Cron 使用 cron 表达式新建一个定时任务
@@ -223,6 +234,13 @@ func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time) context.C
 //
 // 如果 [Server.State] 为 [Cancelled] 那么将会直接触发 panic。
 func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler) context.CancelFunc {
+	return s.newJob(title, f, scheduler, false)
+}
+
+// newJob 声明 Job，imm 表示首次调度时是否立即执行。
+func (s *Server) newJob(
+	title localeutil.Stringer, f JobFunc, scheduler Scheduler, imm bool,
+) context.CancelFunc {
 	if scheduler == nil {
 		panic("参数 scheduler 不能为空")
 	}
@@ -235,6 +253,7 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler) 
 		scheduler: scheduler,
 		title:     title,
 		f:         f,
+		imm:       imm,
 	}
 
 	s.locker.Lock()

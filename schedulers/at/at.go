@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2018-2024 caixw
+// SPDX-FileCopyrightText: 2018-2026 caixw
 //
 // SPDX-License-Identifier: MIT
 
@@ -13,12 +13,10 @@ import (
 
 // At 返回只在指定时间执行一次的调度器
 func At(t time.Time) schedulers.Scheduler {
-	return schedulers.SchedulerFunc(func(time.Time) time.Time {
-		if t.IsZero() {
-			return t
+	return schedulers.SchedulerFunc(func(last time.Time) time.Time {
+		if !t.After(last) {
+			return time.Time{}
 		}
-		ret := t
-		t = time.Time{}
-		return ret
+		return t
 	})
 }
