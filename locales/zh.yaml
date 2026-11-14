@@ -35,12 +35,9 @@ messages:
 - key: "scheduled: start job %s at %s"
   message:
     msg: 在 %[2]s 运行计划任务 %[1]s
-- key: server is cancelled, cannot start again
+- key: server state is %v, this operation is not allowed
   message:
-    msg: 不能运行被取消的服务
-- key: server is running, cannot start again
-  message:
-    msg: 不能运行已经处于运行状态的服务
+    msg: 当前状态为 %v，不能进行此操作！
 - key: the value %d out of range [%d,%d]
   message:
     msg: 值 %d 超出了范围 [%d,%d]

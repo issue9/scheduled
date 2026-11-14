@@ -29,20 +29,9 @@ const (
 	Cancelled // 取消，一般由用户主动发起，比如：Server 关闭，或是 Server.New 返回的函数主动关闭。
 )
 
-var (
-	errServerRunning   = localeutil.Error("server is running, cannot start again")
-	errServerCancelled = localeutil.Error("server is cancelled, cannot start again")
-)
-
-// ErrServerRunning 表示 [Server] 已经处于运行状态
-//
-// 当多次调用 [Server.Serve] 时，可能返回此错误信息。
-func ErrServerRunning() error { return errServerRunning }
-
-// ErrServerCancelled 表示 [Server] 已经被取消
-//
-// 当 [Server.Serve] 的 ctx 已经 Done 时，再次调用 [Server.Serve] 可能返回此错误信息。
-func ErrServerCancelled() error { return errServerCancelled }
+func errServerState(s State) error {
+	return localeutil.Error("server state is %v, this operation is not allowed", s)
+}
 
 type (
 	Scheduler     = schedulers.Scheduler
@@ -83,6 +72,14 @@ var (
 		"cancelled": Cancelled,
 	}
 )
+
+func any2Error(msg any) error {
+	if e, ok := msg.(error); ok {
+		return e
+	} else {
+		return localeutil.Error("recover msg %v", msg)
+	}
+}
 
 // NewTermLogger 声明输出到终端的日志
 func NewTermLogger(p *localeutil.Printer) Logger { return &termLogger{p: p} }

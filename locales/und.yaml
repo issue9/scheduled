@@ -34,12 +34,9 @@ messages:
 - key: "scheduled: start job %s at %s"
   message:
     msg: "scheduled: start job %s at %s"
-- key: server is cancelled, cannot start again
+- key: server state is %v, this operation is not allowed
   message:
-    msg: server is cancelled, cannot start again
-- key: server is running, cannot start again
-  message:
-    msg: server is running, cannot start again
+    msg: server state is %v, this operation is not allowed
 - key: the value %d out of range [%d,%d]
   message:
     msg: the value %d out of range [%d,%d]

@@ -26,10 +26,10 @@ type Job struct {
 	Count    int                 // 运行的次数
 	ErrCount int                 // 运行出错的次数
 	Title    localeutil.Stringer // 简要描述信息
-	Next     time.Time           // 返回下次执行的时间点
+	Next     time.Time           // 下次执行的时间点
 	Prev     time.Time           // 当前正在执行或是上次执行的时间点
-	State    State               // 获取当前的状态
-	Err      error               // 返回当前的错误信息
+	State    State               // 当前的状态
+	Err      error               // 当前的错误信息
 }
 
 type job struct {
@@ -50,27 +50,25 @@ type job struct {
 	errCount int
 }
 
-func (j *job) setRunning() {
-	j.locker.Lock()
-	j.state = Running
-	j.locker.Unlock()
-}
-
 // 运行当前的任务
 //
 // at 调用此函数的大致时间
 func (j *job) run(at time.Time) {
-	go j.srv.info.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.title, at.String()))
+	j.srv.wait.Go(func() {
+		j.srv.info.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.title, at.String()))
+	})
 
-	// NOTE: 此 defer 应该始终执行到最后，那里有触发任务调度的机制。
-	defer func() {
+	// 所有可能的错误信息都通过此变量中转给 j.finish。
+	//
+	// j.f 如果返回 err 那么就不会在 recover 中捕获 panic，
+	// 所以不存在 panic 会覆盖 j.f 返回值的问题。
+	var err error
+
+	defer func() { // NOTE: 此 defer 应该始终执行到最后，那里有触发任务调度的机制。
 		if msg := recover(); msg != nil {
-			err, ok := msg.(error)
-			if !ok {
-				err = localeutil.Error("recover msg %v", msg)
-			}
-			j.calcFailedState(err)
+			err = any2Error(msg)
 		}
+		j.finish(err)
 
 		// 一旦有一个 job 的 next 重算，需要重新调度任务。
 		select {
@@ -79,65 +77,74 @@ func (j *job) run(at time.Time) {
 		}
 	}()
 
-	if err := j.f(at); err != nil {
-		j.calcFailedState(err)
-		return
-	}
-
-	j.calcStoppedState()
+	err = j.f(time.Now().In(j.srv.Location()))
 }
 
-func (j *job) calcStoppedState() {
-	j.locker.Lock()
-	if j.state == Cancelled {
-		j.next = time.Time{}
-		j.locker.Unlock()
-		return
+// finish 统一处理任务结束后的状态；err 为 nil 表示成功。
+func (j *job) finish(err error) {
+	if err != nil {
+		j.srv.wait.Go(func() {
+			j.srv.erro.Error(err)
+		})
 	}
-	j.locker.Unlock()
-
 	now := time.Now().In(j.srv.Location())
-	next := j.scheduler.Next(now) // 由文档约定不能 panic
 
 	j.locker.Lock()
-	j.prev = j.next
-	j.next = next
-	j.state = Stopped
+	defer func() {
+		// 虽然约定了 [Scheduler.Next] 不能 panic，但是万一呢。
+		if msg := recover(); msg != nil {
+			// err!=nil 的错误计数已经在之前统计过。只 msg != nil 且 err == nil 的
+			// 才是由 j.scheduler.Next 中 panic 的新信息，需要计数。
+			if err == nil {
+				j.errCount++
+			}
+			j.fromRecover(msg)
+		}
+		j.locker.Unlock()
+	}()
+
 	j.count++
-	j.locker.Unlock()
-}
-
-func (j *job) calcFailedState(err error) {
-	go j.srv.erro.Error(err)
-
-	j.locker.Lock()
-	if j.state == Cancelled {
+	if err != nil {
+		j.errCount++
 		j.err = err
+	}
+	if j.state == Cancelled { // 期间被取消，保持 Cancelled 且不再排期
 		j.next = time.Time{}
-		j.locker.Unlock()
 		return
 	}
-	j.locker.Unlock()
+	if err != nil {
+		j.state = Failed
+	} else {
+		j.state, j.err = Stopped, nil
+	}
 
-	now := time.Now().In(j.srv.Location())
-	next := j.scheduler.Next(now) // 由文档约定不能 panic
-
-	j.locker.Lock()
-	j.err = err
-	j.errCount++
-	j.prev = j.next
-	j.next = next
-	j.state = Failed
-	j.count++
-	j.locker.Unlock()
+	// NOTE: 如果 j.scheduler.Next 占用大量时间，那么会占用大量锁的时间。
+	// 如果放在锁外，对于 Cancelled 状态又会浪费一次 Next 的调用。
+	// 把锁拆分为两段，那么就无法保证状态是统一的。
+	j.prev, j.next = j.next, j.scheduler.Next(now)
 }
 
 // 初始化当前任务，获取其下次执行时间。
 func (j *job) init(now time.Time) {
 	j.locker.Lock()
-	j.next = j.scheduler.Next(now)
+
+	defer func() {
+		// 虽然约定了 [Scheduler.Next] 不能 panic，但是万一呢。
+		if msg := recover(); msg != nil {
+			j.fromRecover(msg)
+		}
+		j.locker.Unlock()
+	}()
+
+	j.next = j.scheduler.Next(now) // fromRecover 未设置 j.first，所以此语句要放前面。
 	j.first = j.next
-	j.locker.Unlock()
+}
+
+// 从 recover 的返回值对 job 做状态修改
+func (j *job) fromRecover(msg any) {
+	j.err = any2Error(msg)
+	j.next = time.Time{}
+	j.state = Failed
 }
 
 func sortJobs(jobs []*job) {
@@ -146,9 +153,9 @@ func sortJobs(jobs []*job) {
 		ni := i.next
 		i.locker.RUnlock()
 
-		i.locker.RLock()
+		j.locker.RLock()
 		nj := j.next
-		i.locker.RUnlock()
+		j.locker.RUnlock()
 
 		zi, zj := ni.IsZero(), nj.IsZero()
 		switch {
@@ -164,10 +171,10 @@ func sortJobs(jobs []*job) {
 	})
 }
 
-// Jobs 还回当前所有任务的快照
+// Jobs 返回当前所有任务的快照
 func (s *Server) Jobs() []*Job {
+	s.locker.RLock()
 	jobs := make([]*Job, 0, len(s.jobs))
-	s.jobsMu.RLock()
 	for _, j := range s.jobs {
 		j.locker.RLock()
 		jobs = append(jobs, &Job{
@@ -182,27 +189,27 @@ func (s *Server) Jobs() []*Job {
 		})
 		j.locker.RUnlock()
 	}
-	s.jobsMu.RUnlock()
+	s.locker.RUnlock()
 	return jobs
 }
 
 // Tick 添加一个新的定时任务
 //
-// imm 表示是否先执行一次任务，如果为 true，将会排在任务队列的前列，而不是立即执行！
+// imm 表示是否先执行一次任务！
 func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, imm bool) context.CancelFunc {
 	return s.New(title, f, ticker.Tick(dur, imm))
 }
 
 // Cron 使用 cron 表达式新建一个定时任务
 //
-// 具体文件可以参考 [every.ParseCron]
+// 具体文档可以参考 [every.ParseCron]
 func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string) context.CancelFunc {
 	return s.New(title, f, every.FromCron(spec))
 }
 
 // At 添加 At 类型的定时器
 //
-// 具体文件可以参考 [at.At]
+// 具体文档可以参考 [at.At]
 func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time) context.CancelFunc {
 	return s.New(title, f, at.At(t))
 }
@@ -213,15 +220,14 @@ func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time) context.C
 // f 定时任务实际执行的函数；
 // scheduler 定时任务的调度器；
 // 返回一个取消当前任务的方法，同时会从列表中删除。
+//
+// 如果 [Server.State] 为 [Cancelled] 那么将会直接触发 panic。
 func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler) context.CancelFunc {
 	if scheduler == nil {
 		panic("参数 scheduler 不能为空")
 	}
 	if f == nil {
 		panic("参数 f 不能为空")
-	}
-	if s.cancelled {
-		panic(ErrServerCancelled())
 	}
 
 	j := &job{
@@ -230,11 +236,18 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler) 
 		title:     title,
 		f:         f,
 	}
-	s.jobsMu.Lock()
-	s.jobs = append(s.jobs, j)
-	s.jobsMu.Unlock()
 
-	if s.running { // 服务已经运行，则需要触发调度任务。
+	s.locker.Lock()
+	if s.state == Cancelled {
+		s.locker.Unlock()
+		panic(errServerState(Cancelled))
+	}
+
+	s.jobs = append(s.jobs, j)
+	isRunning := s.state == Running
+	s.locker.Unlock()
+
+	if isRunning { // 服务已经运行，则需要触发调度任务。
 		j.init(time.Now().In(s.Location()))
 		select {
 		case s.schedule <- struct{}{}:
@@ -248,8 +261,8 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler) 
 		j.next = time.Time{}
 		j.locker.Unlock()
 
-		s.jobsMu.Lock()
+		s.locker.Lock()
 		s.jobs = slices.DeleteFunc(s.jobs, func(e *job) bool { return e == j })
-		s.jobsMu.Unlock()
+		s.locker.Unlock()
 	}
 }

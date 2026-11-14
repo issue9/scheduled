@@ -31,9 +31,9 @@ expr := func(t time.Time) error {
     return err
 }
 
-srv.Tick(localeutil.StringPhrase("title"), ticker, 1*time.Minute, false, false)
-srv.Cron(localeutil.StringPhrase("title"), expr, "@daily", false)
-srv.Cron(localeutil.StringPhrase("title"), expr, "* * 1 * * *", false)
+srv.Tick(localeutil.StringPhrase("title"), ticker, 1*time.Minute, false)
+srv.Cron(localeutil.StringPhrase("title"), expr, "@daily")
+srv.Cron(localeutil.StringPhrase("title"), expr, "* * 1 * * *")
 
 ctx, cancel := context.WithCancel(context.Background())
 err := srv.Serve(ctx)

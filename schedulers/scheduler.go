@@ -16,7 +16,7 @@ type Scheduler interface {
 	//
 	// 传递相同的 last 参数，其返回值应该也相同，或是返回一个零值。
 	//
-	// 此方法不允许 panic，否则可能导致整个宿主服务退出。
+	// 此方法不允许 panic，否则可能导致整个宿主服务出错。
 	Next(last time.Time) time.Time
 }
 

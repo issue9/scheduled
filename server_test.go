@@ -47,20 +47,25 @@ func TestServer_Serve(t *testing.T) {
 		}, 2*time.Second, true)
 
 		ctx, cancel := context.WithCancel(context.Background())
-		go func() { a.ErrorIs(srv.Serve(ctx), context.Canceled) }()
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			a.ErrorIs(srv.Serve(ctx), context.Canceled)
+		}()
 		synctest.Wait()
 
-		synctest.Sleep(5 * time.Second) // 等待任务运行
-		synctest.Wait()
-		a.Equal(srv.Serve(context.Background()), ErrServerRunning()) // 多次调用，返回的错误。
-		a.Equal(srv.Serve(context.Background()), ErrServerRunning()) // 多次调用，返回的错误。
+		synctest.Sleep(5 * time.Second)                                   // 等待任务运行
+		a.Equal(srv.Serve(context.Background()), errServerState(Running)) // 多次调用，返回的错误。
+		a.Equal(srv.Serve(context.Background()), errServerState(Running)) // 多次调用，返回的错误。
 		cancel()
+		<-done
+
 		synctest.Sleep(5 * time.Second)
-		a.Equal(srv.Serve(context.Background()), ErrServerCancelled()) // 多次调用，返回的错误。
-		a.Equal(srv.Serve(context.Background()), ErrServerCancelled()) // 多次调用，返回的错误。
+		a.Equal(srv.Serve(context.Background()), errServerState(Cancelled)) // 多次调用，返回的错误。
+		a.Equal(srv.Serve(context.Background()), errServerState(Cancelled)) // 多次调用，返回的错误。
 		a.PanicValue(func() {
 			srv.New(localeutil.Phrase("test"), succFunc, at.At(time.Now()))
-		}, ErrServerCancelled())
+		}, errServerState(Cancelled))
 
 		a.NotEmpty(tickers1)
 		for i := 1; i < len(tickers1); i++ {
@@ -94,10 +99,14 @@ func TestServer_Serve_empty(t *testing.T) {
 		a.Empty(srv.jobs)
 
 		ctx, cancel := context.WithCancel(context.Background())
-		go func() { srv.Serve(ctx) }()
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			srv.Serve(ctx)
+		}()
 		synctest.Wait()
 
-		a.True(srv.running)
+		a.Equal(srv.State(), Running)
 
 		tickers1 := make([]time.Time, 0, 20)
 
@@ -109,6 +118,7 @@ func TestServer_Serve_empty(t *testing.T) {
 
 		synctest.Sleep(5 * time.Second)
 		cancel()
+		<-done
 
 		a.NotEmpty(tickers1)
 		for i := 1; i < len(tickers1); i++ {
@@ -140,10 +150,14 @@ func TestServer_Serve_zero(t *testing.T) {
 		a.Length(srv.Jobs(), 1)
 
 		ctx, cancel := context.WithCancel(context.Background())
-		go func() { srv.Serve(ctx) }()
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			srv.Serve(ctx)
+		}()
 		synctest.Wait()
 
-		a.True(srv.running)
+		a.Equal(srv.State(), Running)
 
 		tickers2 := make([]time.Time, 0, 20)
 		srv.Tick(localeutil.StringPhrase("zero-ticker2"), func(t time.Time) error {
@@ -154,6 +168,7 @@ func TestServer_Serve_zero(t *testing.T) {
 
 		synctest.Sleep(5 * time.Second)
 		cancel()
+		<-done
 
 		a.Empty(tickers1)
 		a.NotEmpty(tickers2)
@@ -167,46 +182,55 @@ func TestServer_Serve_zero(t *testing.T) {
 
 // 运行时间超过一个时间间隔的任务
 func TestServer_Serve_delay(t *testing.T) {
-	a := assert.New(t, false)
-	srv := NewServer(nil, nil, nil)
-	a.NotNil(srv)
+	synctest.Test(t, func(t *testing.T) {
+		a := assert.New(t, false)
+		srv := NewServer(nil, nil, nil)
+		a.NotNil(srv)
 
-	tickers1 := make([]time.Time, 0, 20)
-	srv.Tick(localeutil.StringPhrase("delay-ticker1"), func(t time.Time) error {
-		tickers1 = append(tickers1, t)
-		println("delay-ticker1", t.String())
-		time.Sleep(2 * time.Second)
-		return nil
-	}, time.Second, true)
+		tickers1 := make([]time.Time, 0, 20)
+		srv.Tick(localeutil.StringPhrase("delay-ticker1"), func(t time.Time) error {
+			tickers1 = append(tickers1, t)
+			println("delay-ticker1", t.String())
+			synctest.Sleep(2 * time.Second)
+			return nil
+		}, time.Second, true)
 
-	tickers2 := make([]time.Time, 0, 20)
-	srv.Tick(localeutil.StringPhrase("delay-ticker2"), func(t time.Time) error {
-		tickers2 = append(tickers2, t)
-		println("delay-ticker2", t.String())
-		time.Sleep(2 * time.Second)
-		return nil
-	}, time.Second, false)
+		tickers2 := make([]time.Time, 0, 20)
+		srv.Tick(localeutil.StringPhrase("delay-ticker2"), func(t time.Time) error {
+			tickers2 = append(tickers2, t)
+			println("delay-ticker2", t.String())
+			synctest.Sleep(2 * time.Second)
+			return nil
+		}, time.Second, false)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() { srv.Serve(ctx) }()
-	time.Sleep(500 * time.Millisecond) // 等待 srv.Serve
-	a.True(srv.running)
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() {
+			// Serve 是个阻塞 goroutine，需要等其完成。
+			// 此处因为在 Tick 中添加了 time.Sleep，效果尤为突出。
+			defer close(done)
+			srv.Serve(ctx)
+		}()
+		synctest.Wait()
+		a.Equal(srv.State(), Running)
 
-	time.Sleep(5 * time.Second)
-	cancel()
+		synctest.Sleep(5 * time.Second)
+		cancel()
+		<-done
 
-	a.NotEmpty(tickers1).
-		NotEmpty(tickers2)
-	for i := 2; i < len(tickers1); i++ {
-		prev := tickers1[i-1].Unix()
-		curr := tickers1[i].Unix()
-		a.InDelta(prev, curr, 4, "v1=%d, v2=%d", prev, curr)
-	}
-	for i := 1; i < len(tickers2); i++ {
-		prev := tickers2[i-1].Unix()
-		curr := tickers2[i].Unix()
-		a.InDelta(prev, curr, 4, "v1=%d, v2=%d", prev, curr)
-	}
+		a.NotEmpty(tickers1).
+			NotEmpty(tickers2)
+		for i := 2; i < len(tickers1); i++ {
+			prev := tickers1[i-1].Unix()
+			curr := tickers1[i].Unix()
+			a.InDelta(prev, curr, 4, "v1=%d, v2=%d", prev, curr)
+		}
+		for i := 1; i < len(tickers2); i++ {
+			prev := tickers2[i-1].Unix()
+			curr := tickers2[i].Unix()
+			a.InDelta(prev, curr, 4, "v1=%d, v2=%d", prev, curr)
+		}
+	})
 }
 
 func TestServer_Serve_loc(t *testing.T) {
@@ -233,10 +257,17 @@ func TestServer_Serve_loc(t *testing.T) {
 		spec := fmt.Sprintf("%d %d %d %d %d *", s, minute, h, d, m)
 
 		srv.Cron(localeutil.StringPhrase("cron"), job, spec)
+
 		ctx, cancel := context.WithCancel(context.Background())
-		go func() { srv.Serve(ctx) }()
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			srv.Serve(ctx)
+		}()
 		synctest.Wait()
 		cancel()
+		<-done
+
 		a.Equal(0, buf.Len(), buf.String())
 	})
 }
