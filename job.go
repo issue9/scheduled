@@ -14,6 +14,7 @@ import (
 
 	"github.com/issue9/scheduled/schedulers/at"
 	"github.com/issue9/scheduled/schedulers/every"
+	"github.com/issue9/scheduled/schedulers/nop"
 	"github.com/issue9/scheduled/schedulers/ticker"
 )
 
@@ -214,7 +215,11 @@ func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, i
 // Cron 使用 cron 表达式新建一个定时任务
 //
 // 具体文档可以参考 [every.ParseCron]
+// 相对于 [every.ParseCron]，当前方法添加了对 '@reboot' 指令的支持。
 func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string) context.CancelFunc {
+	if spec == "@reboot" {
+		return s.New(title, f, nop.Nop(), true)
+	}
 	return s.New(title, f, every.FromCron(spec), false)
 }
 
@@ -230,6 +235,7 @@ func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time) context.C
 // title 任务的简要描述；
 // f 定时任务实际执行的函数；
 // scheduler 定时任务的调度器；
+// imm 是否将首次执行时间设为当前时间（即启动后立即执行一次）；
 // 返回一个取消当前任务的方法，同时会从列表中删除。
 //
 // 如果 [Server.State] 为 [Cancelled] 那么将会直接触发 panic。

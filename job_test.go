@@ -5,8 +5,11 @@
 package scheduled
 
 import (
+	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/issue9/assert/v6"
@@ -169,5 +172,28 @@ func TestServer_Cron(t *testing.T) {
 	srv.Cron(localeutil.StringPhrase("test"), succFunc, "* * * 3-7 * *")
 	a.Panic(func() {
 		srv.Cron(localeutil.StringPhrase("test"), succFunc, "* * * 3-7a * *")
+	})
+}
+
+func TestServer_Cron_reboot(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		a := assert.New(t, false)
+		srv := NewServer(nil, nil, nil)
+
+		var n atomic.Int64
+		srv.Cron(localeutil.StringPhrase("reboot"), func(time.Time) error {
+			n.Add(1)
+			return nil
+		}, "@reboot")
+
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() { defer close(done); srv.Serve(ctx) }()
+
+		synctest.Sleep(10 * time.Second)
+		cancel()
+		<-done
+
+		a.Equal(n.Load(), int64(1))
 	})
 }

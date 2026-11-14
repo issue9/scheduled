@@ -94,7 +94,7 @@ func AM(minutes, seconds []int) schedulers.Scheduler {
 	return Daily(hours[:12], minutes, seconds)
 }
 
-// AM 创建只运行于下午的调度器
+// PM 创建只运行于下午的调度器
 func PM(minutes, seconds []int) schedulers.Scheduler {
 	return Daily(hours[12:], minutes, seconds)
 }

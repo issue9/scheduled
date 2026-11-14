@@ -14,7 +14,6 @@ import (
 	"github.com/issue9/sliceutil"
 
 	"github.com/issue9/scheduled/schedulers"
-	"github.com/issue9/scheduled/schedulers/at"
 )
 
 // 常用的便捷指令
@@ -62,7 +61,6 @@ func FromCron(spec string) schedulers.Scheduler {
 //
 // 同时支持以下便捷指令：
 //
-//	@reboot:   启动时执行一次
 //	@yearly:   0 0 0 1 1 *
 //	@annually: 0 0 0 1 1 *
 //	@monthly:  0 0 0 1 * *
@@ -76,8 +74,6 @@ func ParseCron(spec string) (schedulers.Scheduler, error) {
 	switch {
 	case spec == "":
 		return nil, syntaxError(localeutil.Phrase("can not be empty"))
-	case spec == "@reboot":
-		return at.At(time.Now().Add(time.Second)), nil
 	case spec[0] == '@':
 		d, found := direct[spec]
 		if !found {

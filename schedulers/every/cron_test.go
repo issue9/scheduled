@@ -247,17 +247,6 @@ func TestParseCronError(t *testing.T) {
 	}
 }
 
-func TestParseCronReboot(t *testing.T) {
-	a := assert.New(t, false)
-
-	s, err := ParseCron("@reboot")
-	a.NotError(err).NotNil(s)
-
-	first := s.Next(time.Time{})
-	a.False(first.IsZero())
-	a.True(s.Next(first).IsZero())
-}
-
 func TestParseField(t *testing.T) {
 	data := []struct {
 		name   string
