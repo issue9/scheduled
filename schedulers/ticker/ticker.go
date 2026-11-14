@@ -12,6 +12,8 @@ import (
 )
 
 // Tick 声明一个固定时间段的定时任务
+//
+// d 必须大于等于 1 秒，否则会 panic。
 func Tick(d time.Duration) schedulers.Scheduler {
 	if d < time.Second {
 		panic("参数 d 的值必须在 1 秒以上")

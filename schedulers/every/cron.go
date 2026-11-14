@@ -173,14 +173,14 @@ func parseField[T integer](field string, b bound[T]) ([]T, error) {
 			n1, n2 = n, n
 		}
 
+		if n1 > n2 {
+			return nil, syntaxError(localeutil.Phrase("invalid range %s", v))
+		}
 		if !b.valid(n1) {
 			return nil, syntaxError(localeutil.Phrase("the value %d out of range [%d,%d]", n1, b.min, b.max))
 		}
 		if !b.valid(n2) {
 			return nil, syntaxError(localeutil.Phrase("the value %d out of range [%d,%d]", n2, b.min, b.max))
-		}
-		if n1 > n2 {
-			return nil, syntaxError(localeutil.Phrase("invalid range %s", v))
 		}
 
 		if hasRange {
@@ -200,6 +200,4 @@ func parseField[T integer](field string, b bound[T]) ([]T, error) {
 	return list, nil
 }
 
-func syntaxError(s localeutil.Stringer) error {
-	return localeutil.Error("cron syntax error %s", s)
-}
+func syntaxError(s localeutil.Stringer) error { return localeutil.Error("cron syntax error %s", s) }
