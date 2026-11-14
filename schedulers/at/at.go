@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-// Package at 提供类似于 at 指令的定时器
+// Package at 提供了执行一次的调度器
 package at
 
 import (

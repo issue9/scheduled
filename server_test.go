@@ -64,7 +64,7 @@ func TestServer_Serve(t *testing.T) {
 		a.Equal(srv.Serve(context.Background()), errServerState(Cancelled)) // 多次调用，返回的错误。
 		a.Equal(srv.Serve(context.Background()), errServerState(Cancelled)) // 多次调用，返回的错误。
 		a.PanicValue(func() {
-			srv.New(localeutil.Phrase("test"), succFunc, at.At(time.Now()))
+			srv.New(localeutil.Phrase("test"), succFunc, at.At(time.Now()), false)
 		}, errServerState(Cancelled))
 
 		a.NotEmpty(tickers1)
@@ -146,7 +146,7 @@ func TestServer_Serve_zero(t *testing.T) {
 			tickers1 = append(tickers1, t)
 			println("zero-ticker1", t.String())
 			return nil
-		}, zero{})
+		}, zero{}, false)
 		a.Length(srv.Jobs(), 1)
 
 		ctx, cancel := context.WithCancel(context.Background())

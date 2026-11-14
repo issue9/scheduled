@@ -208,21 +208,21 @@ func (s *Server) Jobs() []*Job {
 //
 // imm 表示是否先执行一次任务！
 func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, imm bool) context.CancelFunc {
-	return s.newJob(title, f, ticker.Tick(dur), imm)
+	return s.New(title, f, ticker.Tick(dur), imm)
 }
 
 // Cron 使用 cron 表达式新建一个定时任务
 //
 // 具体文档可以参考 [every.ParseCron]
 func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string) context.CancelFunc {
-	return s.New(title, f, every.FromCron(spec))
+	return s.New(title, f, every.FromCron(spec), false)
 }
 
 // At 添加 At 类型的定时器
 //
 // 具体文档可以参考 [at.At]
 func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time) context.CancelFunc {
-	return s.New(title, f, at.At(t))
+	return s.New(title, f, at.At(t), false)
 }
 
 // New 添加一个新的定时任务
@@ -233,14 +233,7 @@ func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time) context.C
 // 返回一个取消当前任务的方法，同时会从列表中删除。
 //
 // 如果 [Server.State] 为 [Cancelled] 那么将会直接触发 panic。
-func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler) context.CancelFunc {
-	return s.newJob(title, f, scheduler, false)
-}
-
-// newJob 声明 Job，imm 表示首次调度时是否立即执行。
-func (s *Server) newJob(
-	title localeutil.Stringer, f JobFunc, scheduler Scheduler, imm bool,
-) context.CancelFunc {
+func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, imm bool) context.CancelFunc {
 	if scheduler == nil {
 		panic("参数 scheduler 不能为空")
 	}
