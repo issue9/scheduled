@@ -107,11 +107,20 @@ func ParseCron(spec string) (schedulers.Scheduler, error) {
 		case 4:
 			months, err = parseField(field, monthBound)
 		case 5:
-			weekdays, err = parseField(field, weekdayBound)
+			weekdays, err = parseField(field, cronWeekdayBound)
 		}
 
 		if err != nil {
 			return nil, err
+		}
+	}
+
+	// 将星期中的 7 转换为 0
+	if len(weekdays) > 0 {
+		for i, w := range weekdays {
+			if w == 7 {
+				weekdays[i] = time.Sunday
+			}
 		}
 	}
 
@@ -155,7 +164,7 @@ func parseField[T integer](field string, b bound[T]) ([]T, error) {
 			if base != "*" {
 				minVal, maxVal, ok, err := parseRange(base, b)
 				if err != nil {
-					return nil, err
+					return nil, syntaxError(err)
 				}
 				if !ok {
 					minV = T(minVal)
@@ -190,7 +199,7 @@ func parseField[T integer](field string, b bound[T]) ([]T, error) {
 		if len(v) <= 2 { // 少于 3 个字符，说明不可能有特殊字符。
 			n, err := strconv.Atoi(v)
 			if err != nil {
-				return nil, err
+				return nil, syntaxError(err)
 			}
 
 			if !b.valid(n) {
@@ -203,7 +212,7 @@ func parseField[T integer](field string, b bound[T]) ([]T, error) {
 
 		n1, n2, hasRange, err := parseRange(v, b)
 		if err != nil {
-			return nil, err
+			return nil, syntaxError(err)
 		}
 
 		if hasRange {

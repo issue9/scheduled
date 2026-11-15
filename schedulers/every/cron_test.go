@@ -45,6 +45,11 @@ func TestParseCron(t *testing.T) {
 			want: "2024-01-07T00:00:00Z",
 		},
 		{
+			name: "每周日-7",
+			spec: "0 0 0 * * 7",
+			want: "2024-01-07T00:00:00Z",
+		},
+		{
 			name: "每周六",
 			spec: "0 0 0 * * 6",
 			want: "2024-01-06T00:00:00Z",

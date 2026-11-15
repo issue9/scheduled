@@ -26,13 +26,14 @@ var (
 )
 
 var (
-	secondBound  = bound[int]{min: 0, max: 59}
-	minuteBound  = bound[int]{min: 0, max: 59}
-	hourBound    = bound[int]{min: 0, max: 23}
-	weekdayBound = bound[time.Weekday]{min: time.Sunday, max: time.Saturday}
-	monthBound   = bound[time.Month]{min: time.January, max: time.December}
-	yearBound    = bound[int]{min: minYear, max: maxYear}
-	dayBound     = bound[int]{min: 1, max: 31} // 每个月的日期范围
+	secondBound      = bound[int]{min: 0, max: 59}
+	minuteBound      = bound[int]{min: 0, max: 59}
+	hourBound        = bound[int]{min: 0, max: 23}
+	weekdayBound     = bound[time.Weekday]{min: time.Sunday, max: time.Saturday}
+	cronWeekdayBound = bound[time.Weekday]{min: time.Sunday, max: 7} // cron 中支持用 7 表示星期日
+	monthBound       = bound[time.Month]{min: time.January, max: time.December}
+	yearBound        = bound[int]{min: minYear, max: maxYear}
+	dayBound         = bound[int]{min: 1, max: 31} // 每个月的日期范围
 )
 
 func buildMonthDayBound(month time.Month, year int) bound[int] {
