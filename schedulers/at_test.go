@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package at
+package schedulers
 
 import (
 	"testing"

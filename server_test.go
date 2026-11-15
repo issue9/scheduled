@@ -17,7 +17,7 @@ import (
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 
-	"github.com/issue9/scheduled/schedulers/at"
+	"github.com/issue9/scheduled/schedulers"
 )
 
 func TestServer_Serve(t *testing.T) {
@@ -64,7 +64,7 @@ func TestServer_Serve(t *testing.T) {
 		a.Equal(srv.Serve(context.Background()), errServerState(Cancelled)) // 多次调用，返回的错误。
 		a.Equal(srv.Serve(context.Background()), errServerState(Cancelled)) // 多次调用，返回的错误。
 		a.PanicValue(func() {
-			srv.New(localeutil.Phrase("test"), succFunc, at.At(time.Now()), false)
+			srv.New(localeutil.Phrase("test"), succFunc, schedulers.At(time.Now()), false)
 		}, errServerState(Cancelled))
 
 		a.NotEmpty(tickers1)

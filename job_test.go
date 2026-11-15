@@ -18,7 +18,6 @@ import (
 	"golang.org/x/text/message"
 
 	"github.com/issue9/scheduled/schedulers"
-	"github.com/issue9/scheduled/schedulers/ticker"
 )
 
 var (
@@ -52,7 +51,7 @@ func TestJob_run(t *testing.T) {
 	srv := NewServer(nil, term, term)
 
 	newTickerJob := func(duration time.Duration) schedulers.Scheduler {
-		s := ticker.Tick(duration)
+		s := schedulers.Tick(duration)
 		a.NotNil(s)
 		return s
 	}

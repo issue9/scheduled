@@ -7,17 +7,14 @@ package scheduled
 import (
 	"context"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/issue9/localeutil"
 
 	"github.com/issue9/scheduled/schedulers"
-	"github.com/issue9/scheduled/schedulers/at"
-	"github.com/issue9/scheduled/schedulers/earliest"
 	"github.com/issue9/scheduled/schedulers/every"
-	"github.com/issue9/scheduled/schedulers/nop"
-	"github.com/issue9/scheduled/schedulers/ticker"
 )
 
 // JobFunc 每一个定时任务实际上执行的函数签名
@@ -216,7 +213,7 @@ func (s *Server) Jobs() []*Job {
 //
 // imm 表示是否先执行一次任务！
 func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, imm bool) context.CancelFunc {
-	return s.New(title, f, ticker.Tick(dur), imm)
+	return s.New(title, f, schedulers.Tick(dur), imm)
 }
 
 // Cron 使用 cron 表达式新建一个定时任务
@@ -224,20 +221,21 @@ func (s *Server) Tick(title localeutil.Stringer, f JobFunc, dur time.Duration, i
 // 具体文档可以参考 [every.ParseCron]
 // 相对于 [every.ParseCron]，当前方法添加了对 '@reboot' 指令的支持。
 func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string) context.CancelFunc {
+	spec = strings.TrimSpace(spec)
 	if spec == "@reboot" {
-		return s.New(title, f, nop.Nop(), true)
+		return s.New(title, f, schedulers.Nop(), true)
 	}
 	return s.New(title, f, every.FromCron(spec), false)
 }
 
 // At 添加 [at.At] 类型的定时器
 func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time) context.CancelFunc {
-	return s.New(title, f, at.At(t), false)
+	return s.New(title, f, schedulers.At(t), false)
 }
 
 // Earliest 添加 [earliest.Earliest] 类型的调度器
 func (s *Server) Earliest(title localeutil.Stringer, f JobFunc, scheduler ...schedulers.Scheduler) context.CancelFunc {
-	return s.New(title, f, earliest.Earliest(scheduler...), false)
+	return s.New(title, f, schedulers.Earliest(scheduler...), false)
 }
 
 // New 添加一个新的定时任务

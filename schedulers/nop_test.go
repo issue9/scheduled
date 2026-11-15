@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package nop
+package schedulers
 
 import (
 	"testing"

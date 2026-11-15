@@ -7,10 +7,11 @@
 
 // Package scheduled 计划任务管理工具
 //
-// 目前 scheduled 内置了以下三种算法：
+// 目前 scheduled 内置了以下几种算法：
 //   - every 实现了 crontab 中的大部分语法功能以及自定义的 Every 方法；
 //   - at 在固定的时间点执行一次任务；
 //   - ticker 以固定的时间段执行任务，与 [time.Ticker] 相同。
+//   - earliest 从几种调度器选择最近时间的一个；
 package scheduled
 
 import (

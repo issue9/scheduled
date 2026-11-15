@@ -2,21 +2,18 @@
 //
 // SPDX-License-Identifier: MIT
 
-package earliest
+package schedulers
 
 import (
 	"testing"
 	"time"
 
 	"github.com/issue9/assert/v6"
-
-	"github.com/issue9/scheduled/schedulers"
-	"github.com/issue9/scheduled/schedulers/ticker"
 )
 
 // fixed 返回一个总是给出相同结果的调度器
-func fixed(t time.Time) schedulers.Scheduler {
-	return schedulers.SchedulerFunc(func(time.Time) time.Time { return t })
+func fixed(t time.Time) Scheduler {
+	return SchedulerFunc(func(time.Time) time.Time { return t })
 }
 
 func TestEarliest(t *testing.T) {
@@ -30,36 +27,36 @@ func TestEarliest(t *testing.T) {
 
 	t.Run("单个", func(t *testing.T) {
 		a := assert.New(t, false)
-		a.Equal(Earliest(ticker.Tick(time.Hour)).Next(now), now.Add(time.Hour))
+		a.Equal(Earliest(Tick(time.Hour)).Next(now), now.Add(time.Hour))
 	})
 
 	t.Run("取最早", func(t *testing.T) {
 		a := assert.New(t, false)
-		s := Earliest(ticker.Tick(2*time.Hour), ticker.Tick(time.Hour), ticker.Tick(90*time.Minute))
+		s := Earliest(Tick(2*time.Hour), Tick(time.Hour), Tick(90*time.Minute))
 		a.Equal(s.Next(now), now.Add(time.Hour))
 	})
 
 	t.Run("最早项不是第一个", func(t *testing.T) {
 		a := assert.New(t, false)
-		s := Earliest(ticker.Tick(time.Hour), ticker.Tick(time.Minute))
+		s := Earliest(Tick(time.Hour), Tick(time.Minute))
 		a.Equal(s.Next(now), now.Add(time.Minute))
 	})
 
 	t.Run("忽略小于 last 的项", func(t *testing.T) {
 		a := assert.New(t, false)
-		s := Earliest(fixed(now.Add(-time.Hour)), ticker.Tick(time.Hour))
+		s := Earliest(fixed(now.Add(-time.Hour)), Tick(time.Hour))
 		a.Equal(s.Next(now), now.Add(time.Hour))
 	})
 
 	t.Run("忽略零值", func(t *testing.T) {
 		a := assert.New(t, false)
-		s := Earliest(fixed(time.Time{}), ticker.Tick(time.Hour))
+		s := Earliest(fixed(time.Time{}), Tick(time.Hour))
 		a.Equal(s.Next(now), now.Add(time.Hour))
 	})
 
 	t.Run("等于 last 的项", func(t *testing.T) {
 		a := assert.New(t, false)
-		s := Earliest(fixed(now), ticker.Tick(time.Hour))
+		s := Earliest(fixed(now), Tick(time.Hour))
 		a.Equal(s.Next(now), now)
 	})
 
@@ -77,7 +74,7 @@ func TestEarliest(t *testing.T) {
 
 	t.Run("纯函数", func(t *testing.T) {
 		a := assert.New(t, false)
-		s := Earliest(ticker.Tick(2*time.Hour), ticker.Tick(time.Hour))
+		s := Earliest(Tick(2*time.Hour), Tick(time.Hour))
 
 		first := s.Next(now)
 		a.Equal(first, now.Add(time.Hour))
