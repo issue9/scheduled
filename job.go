@@ -12,7 +12,9 @@ import (
 
 	"github.com/issue9/localeutil"
 
+	"github.com/issue9/scheduled/schedulers"
 	"github.com/issue9/scheduled/schedulers/at"
+	"github.com/issue9/scheduled/schedulers/earliest"
 	"github.com/issue9/scheduled/schedulers/every"
 	"github.com/issue9/scheduled/schedulers/nop"
 	"github.com/issue9/scheduled/schedulers/ticker"
@@ -228,11 +230,14 @@ func (s *Server) Cron(title localeutil.Stringer, f JobFunc, spec string) context
 	return s.New(title, f, every.FromCron(spec), false)
 }
 
-// At 添加 At 类型的定时器
-//
-// 具体文档可以参考 [at.At]
+// At 添加 [at.At] 类型的定时器
 func (s *Server) At(title localeutil.Stringer, f JobFunc, t time.Time) context.CancelFunc {
 	return s.New(title, f, at.At(t), false)
+}
+
+// Earliest 添加 [earliest.Earliest] 类型的调度器
+func (s *Server) Earliest(title localeutil.Stringer, f JobFunc, scheduler ...schedulers.Scheduler) context.CancelFunc {
+	return s.New(title, f, earliest.Earliest(scheduler...), false)
 }
 
 // New 添加一个新的定时任务
