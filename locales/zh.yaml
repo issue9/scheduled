@@ -5,12 +5,12 @@ messages:
 - key: can not be empty
   message:
     msg: 不能为空
+- key: can not get next schedule time
+  message:
+    msg: 无法获取下一次任务时间
 - key: cron syntax error %s
   message:
     msg: 语法错误： %s
-- key: duplicate value %d
-  message:
-    msg: 重复的值 %d
 - key: incorrect length
   message:
     msg: 错误的长度

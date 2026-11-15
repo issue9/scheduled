@@ -4,12 +4,12 @@ messages:
 - key: can not be empty
   message:
     msg: can not be empty
+- key: can not get next schedule time
+  message:
+    msg: can not get next schedule time
 - key: cron syntax error %s
   message:
     msg: cron syntax error %s
-- key: duplicate value %d
-  message:
-    msg: duplicate value %d
 - key: incorrect length
   message:
     msg: incorrect length
