@@ -40,6 +40,8 @@ type (
 	// Logger 日志接口
 	//
 	// NOTE: 同时实现了 [github.com/issue9/logs.Logger] 对象
+	//
+	// NOTE: 日志的所有方法不能 panic，否则会导致整个服务也 panic。
 	Logger interface {
 		// Error 输出错误对象到日志
 		Error(error)

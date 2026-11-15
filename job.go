@@ -55,6 +55,8 @@ type job struct {
 // 运行当前的任务
 //
 // at 调用此函数的大致时间
+//
+// NOTE: 此方法由 WaitGroup.Go 调用，不能 panic。
 func (j *job) run(at time.Time) {
 	j.srv.wait.Go(func() {
 		j.srv.info.LocaleString(localeutil.Phrase("scheduled: start job %s at %s", j.title, at.String()))
@@ -85,9 +87,7 @@ func (j *job) run(at time.Time) {
 // finish 统一处理任务结束后的状态；err 为 nil 表示成功。
 func (j *job) finish(err error) {
 	if err != nil {
-		j.srv.wait.Go(func() {
-			j.srv.erro.Error(err)
-		})
+		j.srv.wait.Go(func() { j.srv.erro.Error(err) })
 	}
 	now := time.Now().In(j.srv.Location())
 
@@ -126,8 +126,13 @@ func (j *job) finish(err error) {
 	j.prev, j.next = j.next, j.scheduler.Next(now)
 
 	// 时间上没有推进
-	if !j.next.After(j.prev) {
-		panic(localeutil.Error("TODO"))
+	if !j.next.IsZero() && !j.next.After(now) {
+		j.state = Failed
+		j.err = localeutil.Error("can not get next schedule time")
+		j.next = time.Time{}
+		if err == nil { // 如果不是进入函数的时候就是带 err，那么还是要加上 errCount 的
+			j.errCount++
+		}
 	}
 }
 
@@ -275,6 +280,10 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, 
 
 	return func() {
 		j.locker.Lock()
+		if j.state == Cancelled { // 保证 cancel 函数是幂等的。
+			j.locker.Unlock()
+			return
+		}
 		j.state = Cancelled
 		j.next = time.Time{}
 		j.locker.Unlock()
@@ -282,5 +291,9 @@ func (s *Server) New(title localeutil.Stringer, f JobFunc, scheduler Scheduler, 
 		s.locker.Lock()
 		s.jobs = slices.DeleteFunc(s.jobs, func(e *job) bool { return e == j })
 		s.locker.Unlock()
+		select {
+		case s.schedule <- struct{}{}:
+		default:
+		}
 	}
 }
