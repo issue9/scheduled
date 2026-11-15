@@ -6,6 +6,7 @@
 package every
 
 import (
+	"slices"
 	"time"
 
 	"github.com/issue9/scheduled/schedulers"
@@ -27,28 +28,77 @@ func Every(
 	return newScheduler(years, months, weekdays, days, hours, minutes, seconds)
 }
 
-// Yearly 与 [Every] 相同但是 years 不允许自定义
+// Yearly 创建在每年固定时间执行的高度器
 func Yearly(
 	months []time.Month, weekdays []time.Weekday, days, hours, minutes, seconds []int,
 ) schedulers.Scheduler {
 	return newScheduler(nil, months, weekdays, days, hours, minutes, seconds)
 }
 
-// Hourly 创建一个只可自定义分和秒的调度器
+// Hourly 创建在每个小时之内固定时间执行的高度器
 //
 // 这是一个特殊的 [Every]，只关注小时以内的定义，其它参数均为默认值。
 func Hourly(minutes, seconds []int) schedulers.Scheduler {
 	return newScheduler(nil, nil, nil, nil, nil, minutes, seconds)
 }
 
+// Daily 创建在每天固定时间执行的调度器
 func Daily(hours, minutes, seconds []int) schedulers.Scheduler {
 	return newScheduler(nil, nil, nil, nil, hours, minutes, seconds)
 }
 
+// Monthly 创建在每个月按固定时间执行的调度器
 func Monthly(days, hours, minutes, seconds []int) schedulers.Scheduler {
 	return newScheduler(nil, nil, nil, days, hours, minutes, seconds)
 }
 
+// EndOfMonthly 创建一个按月末日期运行的调度器
+//
+// 功能与 [Monthly] 相似，但是 days 改为从月末开始计算，比如 days 为 [0,2]，
+// 表示每个月最后一天和倒数第三天的日期。days 的取值范围为 [0,30]，为空时匹配每一天；
+// 其它参数与 [Monthly] 相同。
+func EndOfMonthly(days, hours, minutes, seconds []int) schedulers.Scheduler {
+	validate("days", days, bound[int]{min: 0, max: 30})
+	validate("hours", hours, hourBound)
+	validate("minutes", minutes, minuteBound)
+	validate("seconds", seconds, secondBound)
+
+	return schedulers.SchedulerFunc(func(last time.Time) time.Time {
+		if last.Year() > maxYear {
+			return time.Time{}
+		}
+
+		for year := last.Year(); year <= maxYear; year++ {
+			firstMonth := time.January
+			if year == last.Year() {
+				firstMonth = last.Month()
+			}
+
+			for month := firstMonth; month <= time.December; month++ {
+				monthDays := getMonthDays(month, year)
+				actualDays := make([]int, 0, len(days))
+				for _, day := range slices.Backward(days) {
+					day := monthDays - day
+					if day > 0 {
+						actualDays = append(actualDays, day)
+					}
+				}
+
+				if len(days) > 0 && len(actualDays) == 0 {
+					continue
+				}
+
+				if next := next(last, []int{year}, []time.Month{month}, nil, actualDays, hours, minutes, seconds); !next.IsZero() {
+					return next
+				}
+			}
+		}
+
+		return time.Time{}
+	})
+}
+
+// Monthly 创建在每周按固定时间执行的调度器
 func Weekly(weekdays []time.Weekday, hours, minutes, seconds []int) schedulers.Scheduler {
 	return newScheduler(nil, nil, weekdays, nil, hours, minutes, seconds)
 }

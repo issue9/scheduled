@@ -252,6 +252,89 @@ func TestMonthly(t *testing.T) {
 	}
 }
 
+func TestEndOfMonthly(t *testing.T) {
+	data := []struct {
+		name string
+
+		value                   string
+		days                    []int
+		hours, minutes, seconds []int
+
+		want string
+	}{
+		{
+			name:    "月末",
+			value:   "2024-05-30T12:00:00Z",
+			days:    []int{0},
+			hours:   []int{0},
+			minutes: []int{0},
+			seconds: []int{0},
+			want:    "2024-05-31T00:00:00Z",
+		},
+		{
+			name:    "倒数第三天",
+			value:   "2024-05-28T00:00:00Z",
+			days:    []int{2},
+			hours:   []int{0},
+			minutes: []int{0},
+			seconds: []int{0},
+			want:    "2024-05-29T00:00:00Z",
+		},
+		{
+			name:    "指定日期时间已过",
+			value:   "2024-05-31T10:00:00Z",
+			days:    []int{0},
+			hours:   []int{9},
+			minutes: []int{0},
+			seconds: []int{0},
+			want:    "2024-06-30T09:00:00Z",
+		},
+		{
+			name:    "多个日期和时间",
+			value:   "2024-05-29T09:30:30Z",
+			days:    []int{0, 2},
+			hours:   []int{9, 15},
+			minutes: []int{0, 30},
+			seconds: []int{0, 30},
+			want:    "2024-05-29T15:00:00Z",
+		},
+		{
+			name:    "多个日期和时间均已过",
+			value:   "2024-05-29T15:30:30Z",
+			days:    []int{0, 2},
+			hours:   []int{9, 15},
+			minutes: []int{0, 30},
+			seconds: []int{0, 30},
+			want:    "2024-05-31T09:00:00Z",
+		},
+		{
+			name:    "当月不存在偏移日期",
+			value:   "2024-02-28T00:00:00Z",
+			days:    []int{30},
+			hours:   []int{0},
+			minutes: []int{0},
+			seconds: []int{0},
+			want:    "2024-03-01T00:00:00Z",
+		},
+		{
+			name:  "未指定日期",
+			value: "2024-05-15T00:00:00Z",
+			want:  "2024-05-15T00:00:01Z",
+		},
+	}
+
+	for _, item := range data {
+		t.Run(item.name, func(t *testing.T) {
+			checkNext(t, EndOfMonthly(item.days, item.hours, item.minutes, item.seconds), item.value, item.want)
+		})
+	}
+
+	a := assert.New(t, false)
+	a.Panic(func() { EndOfMonthly([]int{-1}, nil, nil, nil) })
+	a.Panic(func() { EndOfMonthly([]int{31}, nil, nil, nil) })
+	a.NotPanic(func() { EndOfMonthly([]int{0, 30}, nil, nil, nil) })
+}
+
 func TestWeekly(t *testing.T) {
 	data := []struct {
 		name string
